@@ -4,13 +4,10 @@ import logging
 import os
 import re
 import subprocess
-import time
 from typing import Any, Callable, Optional, Tuple, TypeVar, Union
 
 from .const import LOGGING_LEVEL
 from .cyl_logger import CYLLogger
-# from .cyl_async_telnet import CYLAsyncTelnet
-# from .cyl_telnet import CYLResultParser, CYLTelnet
 from .cyl_wrapper import Retry
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,6 +28,9 @@ fail_sign = """
 ██      ██   ██   ███   ██
 ██      ██   ██ ███████ ███████
 """
+
+def package_to_path(package: str):
+    return os.path.join(*package.split('.'))
 
 def check_9528cmd_response(cmd: str, ret: bool, out: dict):
     """Check lgw 9528 cmd response"""
@@ -197,10 +197,12 @@ def is_valid_IP(ip: str) -> bool:
 def is_lgw_cmd_format(content: str):
     """Check lgw command format"""
 
+    ## LGW format check
     pattern = r"^#:.*:#$"
     if not re.fullmatch(pattern, content):
         return False
     
+    ## json format check
     if not content9528_to_dict(content):
         return False
     return True

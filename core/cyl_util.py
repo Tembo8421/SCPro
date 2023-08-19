@@ -110,7 +110,8 @@ def retry_function(function: Callable[[Any,], Tuple[bool, Any]],
         @Retry(retry, func_description, time_sleep)
         def func(**kwargs):
             return function(**kwargs)
-
+        return func(**kwargs)
+        
     @Retry(retry, func_description, time_sleep)
     async def func(**kwargs):
         return await function(**kwargs)

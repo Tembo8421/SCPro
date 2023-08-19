@@ -1,0 +1,81 @@
+{
+    "ref_folder": "D:/產測輔助程式/Binary",
+    "pre_cmds": [
+                {
+                    "_comment": "Show MAC",
+                    "cmd": "flash get HW_NIC1_ADDR | cut -d '=' -f 2",
+                    "timeout_sec": 3, 
+                    "retry": 2
+                },
+                {
+                    "_comment": "Kill lgw and server",
+                    "cmd": "killall -9 restart_server.sh light_gw_server; sleep 1"
+                },
+                {
+                    "_comment": "Kill twice",
+                    "cmd": "!(killall -9 restart_server.sh light_gw_server 2>&1) && echo 'already killed'"
+                },
+                {
+                    "cmd": "sleep 1; ps | grep restart_server"
+                }
+    ],
+    "post_cmds": [
+                {
+                    "_comment": "Restart lgw server",
+                    "cmd": "chmod 765 /root/restart_server.sh; /root/restart_server.sh > /dev/null 2>&1 &"
+                },
+                {
+                    "cmd": "sleep 1; ps | grep restart_server"
+                }
+    ],
+    "files": [ 
+        {
+            "_comment": "Burn in OS",
+            "update_or_not": false,
+            "name": "openwrt-realtek-rtl8196e-None-fw_v0.3.24.bin",
+            "target_path": "/tmp",
+            "post_cmds": [
+                {
+                    "cmd": "sysupgrade -v -n /tmp/openwrt-realtek-rtl8196e-None-fw_v0.3.24.bin",
+                    "timeout_sec": 250,
+                    "readuntil": "Upgrade completed",
+                    "waiting_sec": 50
+                }
+            ]
+        },
+        {
+            "update_or_not": false,
+            "name": "light_gw_server_v0.38.31",
+            "folder": "light_gw_server/",
+            "target_path": "/root/light_gw_server",
+            "chmod": "+x"
+        },
+        {
+            "update_or_not": false,
+            "name": "libuv_1.41.0-1_realtek.ipk",
+            "target_path": "/root/",
+            "post_cmds": [
+                {
+                    "cmd": "opkg install /root/libuv_1.41.0-1_realtek.ipk"
+                }
+            ]
+        },
+        {
+            "update_or_not": false,
+            "name": "device_pair.json",
+            "folder": "root/",
+            "target_path": "/root/"
+        },
+        {
+            "update_or_not": false,
+            "name": "netcat_0.7.1-2_realtek.ipk",
+            "folder": "restart_server/",
+            "target_path": "/root/",
+            "post_cmds": [
+                {
+                    "cmd": "opkg install /root/netcat_0.7.1-2_realtek.ipk"
+                }
+            ]
+        }
+    ]
+}

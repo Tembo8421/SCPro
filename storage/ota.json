@@ -19,7 +19,7 @@
                     "cmd": "sleep 1; ps | grep restart_server"
                 },
                 {
-                    "cmd": "cd /root/otaConfigFile; rm STM32G030K8.bin; ln -sf Dimmer/*Debug*.bin STM32G030K8.bin"
+                    "cmd": "cd /root/otaConfigFile; rm STM32G030K8.bin; ln -sf RS485/*Debug*.bin STM32G030K8.bin"
                 },
                 {
                     "cmd": "cd /root; ./ota.sh",

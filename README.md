@@ -60,7 +60,7 @@ files: 要上傳或下載的檔案/目錄
 
 4. Note:
 
-  echo -e "root\nroot" | passwd root
+  echo -e "Aekoathi0Ahchoa1Iokeejex3doo9tu0\nAekoathi0Ahchoa1Iokeejex3doo9tu0" | passwd root
   reboot
 
 

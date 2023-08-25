@@ -39,6 +39,7 @@
                     "cmd": "sysupgrade -v -n /tmp/openwrt-realtek-rtl8196e-None-fw_v0.3.24.bin",
                     "timeout_sec": 250,
                     "readuntil": "Upgrade completed",
+                    "retry": 0,
                     "waiting_sec": 50
                 }
             ]

@@ -1,44 +1,24 @@
+import os
 import tkinter as tk
 from tkinter import ttk
 
 
-class CustomTreeview(ttk.Treeview):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+def load_files():
+    file_pattern = ".json"
+    files = [file for file in os.listdir('storage') if file.endswith(file_pattern)]
+    combobox['values'] = files
 
-        # Configure the style for selected items
-        style = ttk.Style()
-        style.configure("Custom.Treeview", background="blue", foreground="white")
-        self.tag_configure("custom_selected", style="Custom.Treeview")
-
-        self.bind("<ButtonRelease-1>", self.on_click)
-        self.selected_item = None
-
-    def on_click(self, event):
-        item = self.identify_row(event.y)
-        if item:
-            if self.selected_item:
-                self.item(self.selected_item, tags=("noeffect",))
-            self.item(item, tags=("custom_selected",))
-            self.selected_item = item
-
+# 创建主窗口
 root = tk.Tk()
-root.title("Custom Treeview")
+root.title("Combobox Example")
 
-tree = CustomTreeview(root, columns=("Column1", "Column2"), show="headings")
-tree.heading("Column1", text="Column 1")
-tree.heading("Column2", text="Column 2")
+# 创建Combobox
+combobox = ttk.Combobox(root, state="readonly")
+combobox.pack()
 
-data = [
-    ("Data 1", "Data 2"),
-    ("Data 3", "Data 4"),
-    ("Data 5", "Data 6"),
-    ("Data 7", "Data 8"),
-]
+# 创建按钮，点击按钮加载文件列表
+load_button = tk.Button(root, text="Load Files", command=load_files)
+load_button.pack()
 
-for item in data:
-    tree.insert("", "end", values=item)
-
-tree.pack()
-
+# 启动Tkinter主循环
 root.mainloop()

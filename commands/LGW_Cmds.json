@@ -1,0 +1,55 @@
+{
+    "command_templates": [
+        {"cmd": "configure", "pretty_print": true},
+        {
+            "cmd": "read-attr",
+            "attr": "mcu-system-ticks",
+            "target-id": "0000d01411b00791:1"
+        },
+        {
+            "cmd": "read-attr",
+            "attr": "commit-id",
+            "target-id": "0000D01411B00770:1"
+        },
+        {
+            "cmd": "read-attr",
+            "attr": "model-id",
+            "target-id": "0000D01411B012E9:1"
+        },
+        {
+            "cmd": "read-attr",
+            "attr": "product-id",
+            "target-id": "0000D01411B012E9:1"
+        },
+        {
+            "cmd": "read-attr",
+            "attr": "on-off-transition-time",
+            "target-id": "0000D01411B012A0:1"
+        },
+        {
+            "cmd": "read-attr",
+            "attr": "revision-id",
+            "target-id": "0000D01411B00791:1"
+        },
+        {
+            "cmd": "read-attr",
+            "attr": "target-level",
+            "target-id": "0000D01411B01284:1"
+        },
+        {
+            "cmd": "switch-on",
+            "target-id": "0000d01411b00214:27"
+        },
+        {
+            "cmd": "switch-off",
+            "target-id": "0000d01411b00214:27"
+        },
+        {
+            "cmd": "read-attr",
+            "attr": "on-off-state",
+            "target-id": "0000d01411b00317:25"
+        }
+    ],
+    "channels": "1, 2-4",
+    "timeout_sec": 15
+}

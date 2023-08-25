@@ -30,13 +30,24 @@
     ],
     "files": [
         {
+            "update_or_not": true,
+            "name": "d0*",
+            "folder": "tmp/",
+            "target_path": "",
+            "pre_cmds": [
+                {
+                    "cmd": "touch /tmp/$(flash get HW_NIC1_ADDR | cut -d '=' -f 2)"
+                }
+            ]
+        },
+        {
             "update_or_not": false,
             "name": "root",
             "folder": "/",
             "target_path": ""
         },
         {
-            "update_or_not": true,
+            "update_or_not": false,
             "name": "device_pair.json",
             "folder": "root/",
             "target_path": "root/device_pair.json",

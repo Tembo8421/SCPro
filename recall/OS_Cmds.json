@@ -1,0 +1,50 @@
+{
+    "operations": [
+        {
+            "label": "change passwd",
+            "commands": [
+                "echo -e 'root",
+                "root' | passwd root"
+            ]
+        },
+        {
+            "label": "get IP",
+            "commands": [
+                "ifconfig | grep -Eo 'inet (addr:)?([0-9]*\\.){3}[0-9]*' | grep -Eo '([0-9]*\\.){3}[0-9]*' | grep -v '127.0.0.1'"
+            ]
+        },
+        {
+            "label": "get MAC in flash",
+            "commands": [
+                "flash get HW_NIC1_ADDR | cut -d '=' -f 2"
+            ]
+        },
+        {
+            "label": "get OS version",
+            "commands": [
+                "cat /etc/os_version"
+            ]
+        },
+        {
+            "label": "reboot",
+            "commands": [
+                "reboot"
+            ]
+        },
+        {
+            "label": "remove passwd",
+            "commands": [
+                "passwd -d root"
+            ]
+        },
+        {
+            "label": "set MAC in flash",
+            "commands": [
+                "flash get HW_NIC1_ADDR | cut -d '=' -f 2",
+                "flash set HW_NIC1_ADDR d01411b0ffff",
+                "flash get HW_NIC1_ADDR | cut -d '=' -f 2"
+            ]
+        }
+    ],
+    "timeout_sec": 15
+}

@@ -79,6 +79,7 @@ async def async_scan_device(ip_net: str, timeout=5):
     output_lines = msg.splitlines()
     devices = []
     for line in output_lines:
+        # print(line)
         tokens = line.split(" ")
         if len(tokens) != 7:
             continue
@@ -132,6 +133,7 @@ async def async_discovery_MAC(ip_net_list: list[IPv4Network | IPv4Address],
     host_list = await async_scan_devices(ip_net_list)
 
     # host_list = scan_devices(network)
+    # print(host_list)
     cyl_devices = [host for host in host_list if re.match(mac_pattern, host['mac'])]
     return cyl_devices
 

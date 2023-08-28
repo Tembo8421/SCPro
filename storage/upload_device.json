@@ -1,5 +1,5 @@
 {
-    "ref_folder": "D:/產測輔助程式/Binary",
+    "ref_folder": "devices/{IP}",
     "pre_cmds": [
                 {
                     "_comment": "Show MAC",
@@ -17,20 +17,6 @@
                 },
                 {
                     "cmd": "sleep 1; ps | grep restart_server"
-                },
-                {
-                    "cmd": "cd /root/otaConfigFile; rm STM32G030K8.bin; ln -sf RS485/*Debug*.bin STM32G030K8.bin"
-                },
-                {
-                    "cmd": "cd /root; ./ota.sh",
-                    "timeout_sec": 50,
-                    "retry": 9,
-                    "readuntil": "otaSuccess"
-                },
-                {
-                    "cmd": "/root/reset_gpio.sh",
-                    "timeout_sec": 20,
-                    "retry": 3
                 }
     ],
     "post_cmds": [
@@ -45,10 +31,20 @@
     "files": [
         {
             "update_or_not": false,
-            "name": "light_gw_server_v0.38.31",
-            "folder": "light_gw_server/",
-            "target_path": "/root/light_gw_server",
-            "chmod": "+x"
+            "name": "device_pair.json",
+            "folder": "root/",
+            "target_path": "/root/"
+        },
+        {
+            "update_or_not": false,
+            "name": "d0*",
+            "folder": "",
+            "target_path": "/tmp/",
+            "post_cmds": [
+                {
+                    "cmd": "cat /tmp/d0*"
+                }
+            ]
         }
     ]
 }

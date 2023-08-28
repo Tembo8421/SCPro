@@ -10,63 +10,89 @@ from . import cyl_util, cyl_wrapper
 
 class CYLSCPConfig(object):
     
-    def __init__(self, config_path, config_type: str="upload"):
-        
-        self.config_type = config_type
-        self.config_dir = os.path.dirname(os.path.abspath(config_path))
-        self.initial_config(config_path, config_type=config_type)
+    def __init__(self, config_path, config_type: str="upload", config_variables={}):
+        self.initial_config(config_path, config_type=config_type, config_variables=config_variables)
 
-    def initial_config(self, config_path: str, config_type: str="upload"):
+    def initial_config(self, config_path: str, config_type: str="upload", config_variables={}):
         if not os.path.isfile(config_path):
             return False
 
+        if config_type not in ["upload", "download"]:
+            raise ValueError(f"config_type: '{config_type}' is not supported.")
+
         self.config_type = config_type
-        self.config_dir = os.path.dirname(os.path.abspath(config_path))
-        data = self.parse_config(config_path, config_type=config_type)
+        self.config_abs_dir = os.path.dirname(os.path.abspath(config_path))
+        self.config_name = os.path.basename(config_path)
+        self.config_variables = config_variables
+        config_json = cyl_util.load_config_json(config_path)
+
+        data = self.parse_config(config_json)
         for key in data:
             setattr(self, key, data[key])
 
         return True
 
-    def parse_config(self, config_path: str, config_type: str="upload"):
-
-        config_info = cyl_util.load_config_json(config_path)
-        ## parse ref folder
-        ref_dir = None
-        if config_type == "upload":
-            ref_dir = self.config_dir
-        elif config_type == "download":
-            ref_dir = "/"
+    @staticmethod
+    def replace_strings(json_obj, replacement):
+        if isinstance(json_obj, str):
+            for key, value in replacement.items():
+                json_obj = json_obj.replace("{" + key + "}", value)
+            return json_obj
+        elif isinstance(json_obj, list):
+            return [CYLSCPConfig.replace_strings(item, replacement) for item in json_obj]
+        elif isinstance(json_obj, dict):
+            return {key: CYLSCPConfig.replace_strings(value, replacement) for key, value in json_obj.items()}
         else:
-            raise ValueError(f"config_type: '{config_type}' is not supported.")
+            return json_obj
 
-        ref_folder_abs = config_info["ref_folder"]
-        if os.path.isabs(ref_folder_abs) is False:
-            ref_folder_abs = os.path.join(ref_dir, ref_folder_abs)
+    def parse_config(self, config_json):
+        ## parse ref folder
+        src_ref_abs_dir = None
+        target_ref_abs_dir = None
+        if self.config_type == "upload":
+            src_ref_abs_dir = self.config_abs_dir
+            target_ref_abs_dir = "/"
+        elif self.config_type == "download":
+            src_ref_abs_dir = "/"
+            target_ref_abs_dir = self.config_abs_dir
 
-        config_info["ref_folder"] = ref_folder_abs
+        config_json = CYLSCPConfig.replace_strings(config_json, self.config_variables)
+
+        src_ref_folder_abs = config_json["ref_folder"]
+        if os.path.isabs(src_ref_folder_abs) is False:
+            src_ref_folder_abs = os.path.join(src_ref_abs_dir, src_ref_folder_abs)
+
+        config_json["ref_folder"] = src_ref_folder_abs
 
         ## parse files folder
-        def decide_folder(file_folder):
-            target_folder = ref_folder_abs
+        def abs_src_folder(file_folder):
+            src_folder = src_ref_folder_abs
             if file_folder:
                 if os.path.isabs(file_folder):
-                    target_folder = file_folder
+                    src_folder = file_folder
                 else:
-                    target_folder = os.path.join(ref_folder_abs, file_folder)
-            if target_folder[-1] != "/":
-                return f"{target_folder}/"
-            return target_folder
-        # ## 8196 Image
-        # config_info["8196 Image"]["folder"] = decide_folder(config_info["8196 Image"].get("folder"))
+                    src_folder = os.path.join(src_ref_folder_abs, file_folder)
+            if src_folder[-1] != "/":
+                return f"{src_folder}/"
+            return src_folder
+
+        def abs_target_path(target_path):
+            target_file_path = target_path
+            if not os.path.isabs(target_path):
+                target_file_path = os.path.join(target_ref_abs_dir, target_path)
+            
+            return target_file_path
 
         ## Files
-        for f_info in config_info["files"]:
-            f_info["folder"] = decide_folder(f_info.get("folder"))
-            if (path := f_info.get("target_path", "")) and path[-1] == "/":
-                f_info["target_path"] = os.path.join(path, f_info["name"])
+        for f_info in config_json["files"]:
+            f_info["folder"] = abs_src_folder(f_info.get("folder"))
+            if self.config_type == "download":
+                f_info["target_path"] = abs_target_path(f_info["target_path"])
+            if self.config_type == "upload":
+                if (path := f_info.get("target_path", "")) and path[-1] == "/":
+                    f_info["target_path"] = os.path.join(path, f_info["name"])
 
-        return config_info
+        return config_json
 
 
 class CYLAsyncSSH(object):
@@ -229,12 +255,9 @@ class CYLAsyncSSH(object):
             file_path = os.path.join(file_dict["folder"], file_dict["name"])
 
             if action == "upload":
-                abs_file_path = os.path.abspath(file_path)
-                ret, out = await self.scp(abs_file_path, target_path)
+                # abs_file_path = os.path.abspath(file_path)
+                ret, out = await self.scp(file_path, target_path)
             elif action == "download":
-                download_dir = os.path.join(files_config.config_dir, "devices", cyl_util.make_host_folder_name(self.host))
-
-                target_path = os.path.join(download_dir, target_path)
                 target_dir = os.path.dirname(target_path)
                 os.makedirs(target_dir, exist_ok=True)
 
@@ -285,63 +308,6 @@ class CYLAsyncSSH(object):
             self.conn.close()
             self.conn = None
 
-
-## ========================================================
-## scp multi hosts
-## ========================================================
-
-async def scp_process(username, password, remote_hosts, action="upload", target_folder="storage", config_name=""):
-
-    if not config_name:
-        config_name = action
-    
-    async def update_device(host, username, password, action="upload"):
-
-        config_path = None
-        if action == "upload":
-            config_path = os.path.join(f'{target_folder}/devices', cyl_util.make_host_folder_name(host), f'{config_name}.json')
-            if not os.path.isfile(config_path):
-                config_path = os.path.join(f'{target_folder}', f'{config_name}.json')
-        elif action == "download":
-            config_path = os.path.join(f'{target_folder}', f'{config_name}.json')
-
-        if not os.path.isfile(config_path):
-            return False, f"host ({host}): Cannot find '{config_path}'!"
-
-        mySSH = CYLAsyncSSH()
-        await mySSH.connect(host, username, password)
-        if not mySSH.is_connected():
-            return False, f"host ({host}): Cannot connect!"
-
-        ret, out = await mySSH.transfer_process(CYLSCPConfig(config_path, action))
-        await mySSH.close()
-        if ret:
-            mySSH.logger.info(f"host ({host}): ret: {ret}, out: {out}")
-            mySSH.logger.info(cyl_util.success_sign)
-        else:
-            mySSH.logger.error(f"host ({host}): ret: {ret}, out: {out}")
-            mySSH.logger.error(cyl_util.fail_sign)
-
-        return ret, out
-
-    tasks = []
-    for host in remote_hosts:
-        task = update_device(host, username, password, action)
-        tasks.append(task)
-    
-    # Waiting for all process done
-    res_dict = dict()
-    results = await asyncio.gather(*tasks)
-    failed_hosts = []
-    for i, res in enumerate(results):
-        res_dict[remote_hosts[i]] = res
-        if not res[0]:
-            failed_hosts.append(remote_hosts[i])
-
-    print(f"failed_hosts: {failed_hosts}")
-    
-    return res_dict
-
 ## ====================================================
 ## single host, multi commands
 ## ====================================================
@@ -390,4 +356,64 @@ async def send_ssh_cmds(remote_hosts: List[dict], username, password, cmd_list, 
     for i, res in enumerate(results):
         res_dict[remote_hosts[i]['ip']] = res
 
+    return res_dict
+
+## ========================================================
+## scp multi hosts
+## ========================================================
+## The variable remote_hosts is a list of dictionaries, where each dictionary must contain the key "ip".
+## ex. [{"ip": 192.168.2.10}, {"ip": 192.168.2.55}]
+
+async def scp_process(username, password, remote_hosts: List[dict], action="upload", target_folder="storage", config_name="", host_config_variables={}):
+
+    if not config_name:
+        config_name = action
+    
+    async def update_device(host, username, password, action="upload", host_config_variables={}):
+
+        config_path = os.path.join(f'{target_folder}', f'{config_name}.json')
+
+        if not os.path.isfile(config_path):
+            return False, f"host ({host['ip']}): Cannot find '{config_path}'!"
+
+        config_variables = {k: v for k, v in host_config_variables.items()}
+        if host.get('ip') is not None:
+            config_variables["IP"] = host.get('ip')
+        if host.get('mac') is not None:
+            config_variables["MAC"] = host.get('mac')
+        if host.get('model-id') is not None:
+            config_variables["MODEL"] = host.get('model-id')
+
+        mySSH = CYLAsyncSSH()
+        await mySSH.connect(host['ip'], username, password)
+        if not mySSH.is_connected():
+            return False, f"host ({host['ip']}): Cannot connect!"
+
+        ret, out = await mySSH.transfer_process(CYLSCPConfig(config_path, action, config_variables))
+        await mySSH.close()
+        if ret:
+            mySSH.logger.info(f"host ({host['ip']}): ret: {ret}, out: {out}")
+            mySSH.logger.info(cyl_util.success_sign)
+        else:
+            mySSH.logger.error(f"host ({host['ip']}): ret: {ret}, out: {out}")
+            mySSH.logger.error(cyl_util.fail_sign)
+
+        return ret, out
+
+    tasks = []
+    for host in remote_hosts:
+        task = update_device(host, username, password, action, host_config_variables)
+        tasks.append(task)
+    
+    # Waiting for all process done
+    res_dict = dict()
+    results = await asyncio.gather(*tasks)
+    failed_hosts = []
+    for i, res in enumerate(results):
+        res_dict[remote_hosts[i]['ip']] = res
+        if not res[0]:
+            failed_hosts.append(remote_hosts[i]['ip'])
+
+    print(f"failed_hosts: {failed_hosts}")
+    
     return res_dict

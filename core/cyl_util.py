@@ -260,7 +260,7 @@ def load_config_json(json_path: str, encoding='utf-8'):
 
 def output_config_json(config: dict, json_path: str, encoding='utf-8'):
     """Write a json file"""
-    json_object = json.dumps(config, indent=4)
+    json_object = json.dumps(config, indent=4, ensure_ascii=False)
     with open(json_path, "w", encoding=encoding) as outfile:
         outfile.write(json_object)
 

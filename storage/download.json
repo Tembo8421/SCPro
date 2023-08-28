@@ -33,10 +33,13 @@
             "update_or_not": true,
             "name": "d0*",
             "folder": "tmp/",
-            "target_path": "",
+            "target_path": "devices/{IP}/",
             "pre_cmds": [
                 {
-                    "cmd": "touch /tmp/$(flash get HW_NIC1_ADDR | cut -d '=' -f 2)"
+                    "cmd": "rm /tmp/d0*"
+                },
+                {
+                    "cmd": "touch /tmp/$(flash get HW_NIC1_ADDR | cut -d '=' -f 2)_$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\\.){3}[0-9]*' | grep -Eo '([0-9]*\\.){3}[0-9]*' | grep -v '127.0.0.1')"
                 }
             ]
         },
@@ -44,13 +47,13 @@
             "update_or_not": false,
             "name": "root",
             "folder": "/",
-            "target_path": ""
+            "target_path": "devices/{IP}/"
         },
         {
-            "update_or_not": false,
+            "update_or_not": true,
             "name": "device_pair.json",
             "folder": "root/",
-            "target_path": "root/device_pair.json",
+            "target_path": "devices/{IP}/root/device_pair.json",
             "pre_cmds": [
                 {
                     "cmd": "cat /root/device_pair.json"

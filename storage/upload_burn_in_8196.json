@@ -1,5 +1,5 @@
 {
-    "ref_folder": "D:/產測輔助程式/Binary",
+    "ref_folder": "{BINARY_FOLDER_PATH}",
     "pre_cmds": [
                 {
                     "_comment": "Show MAC",
@@ -26,14 +26,14 @@
             "_comment": "Burn in OS",
             "update_or_not": true,
             "name": "openwrt-realtek-rtl8196e-None-fw_v0.3.24.bin",
-            "target_path": "/tmp",
+            "target_path": "tmp/",
             "post_cmds": [
                 {
                     "cmd": "sysupgrade -v -n /tmp/openwrt-realtek-rtl8196e-None-fw_v0.3.24.bin",
                     "timeout_sec": 250,
                     "readuntil": "Upgrade completed",
                     "retry": 0,
-                    "waiting_sec": 180
+                    "waiting_sec": 50
                 }
             ]
         }

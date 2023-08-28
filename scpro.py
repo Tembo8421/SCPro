@@ -15,6 +15,127 @@ from core import cyl_async_ping, cyl_async_ssh, cyl_async_telnet, cyl_util
 from scanner import scanner
 
 
+class TreeviewEditEntry():
+    
+    def __init__(self, parent, item, column, validate_callback=None):
+        ''' If relwidth is set, then width is ignored '''
+        self.edit_entry = ttk.Entry(parent)
+        self.treeview = parent
+        self.item = item
+        self.column = column
+        self.exit_result = False
+
+        self.validate_callback = validate_callback
+
+        ## get column position info
+        x, y, width, height =  self.treeview.bbox(item, column)
+        pady = height // 2
+        self.edit_entry.place(x=x, y=y+pady, anchor="w", width=width)
+
+        text = self.treeview.set(item, column)
+        self.input_txt = text
+        self.edit_entry.insert(0, text) 
+        # self['state'] = 'readonly'
+        # self['readonlybackground'] = 'white'
+        # self['selectbackground'] = '#1BA1E2'
+        self.edit_entry['exportselection'] = False
+
+        self.edit_entry.focus_force()
+        self.select_all()
+        
+        ## binding
+        self.edit_entry.bind("<Return>", self.on_return)
+        self.edit_entry.bind("<FocusOut>", lambda *ignore: self.edit_entry.destroy())
+        self.edit_entry.bind("<Control-a>", self.select_all)
+        self.edit_entry.bind("<Escape>", lambda *ignore: self.edit_entry.destroy())
+
+    def validate_input(self, input_field, input_text):
+        if self.validate_callback:
+            return self.validate_callback(input_field, input_text)
+        return True
+
+    def on_return(self, event):
+        input_field = self.treeview.heading(self.column, option="text")
+        if not self.validate_input(input_field , self.edit_entry.get()):
+            messagebox.showerror("Error", f"Invalid {input_field} !", parent=self.edit_entry)
+            return
+        self.exit_result = True
+        self.input_txt = self.edit_entry.get()
+        self.edit_entry.destroy()
+
+    def select_all(self, *ignore):
+        ''' Set selection on the whole text '''
+        self.edit_entry.selection_range(0, 'end')
+
+        # returns 'break' to interrupt default key-bindings
+        return 'break'
+
+class myTreeviewBindSetter():
+    def __init__(self, treeview, callback_dict=None, right_click_menu_callback_dict=None):
+        self.treeview = treeview
+        self.menu_callback_func = {"Remove": self.remove_selected_items}
+        if right_click_menu_callback_dict:
+            self.menu_callback_func.update(right_click_menu_callback_dict)
+
+        if callback_dict:
+            self.callback_func = callback_dict
+    
+    def binding(self):
+        self.create_menu()
+        for key, val in self.callback_func.items():
+            if val:
+                self.treeview.bind(key, lambda event: val(event))
+        self.treeview.bind("<Button-3>", self.show_menu)
+        self.treeview.bind("<Double-1>", self.double_click)
+
+    def create_menu(self):
+        self.treeview_menu = tk.Menu(self.treeview, tearoff=0)
+        for key, val in self.menu_callback_func.items():
+            if val:
+                self.treeview_menu.add_command(label=key, command=val)
+
+    def sort(self, event):
+        col_id =  self.treeview.identify('column', event.x, event.y)
+
+        rows = [(str( self.treeview.set(item, col_id)).lower(), item) 
+                    for item in  self.treeview.get_children('')]
+        rows.sort()
+
+        for index, (values, item) in enumerate(rows):
+             self.treeview.move(item, '', index)
+
+    def double_click(self, event):
+        """handel the double click event."""
+        region = self.treeview.identify_region(event.x,event.y)
+
+        ## Clear selection when click on blank
+        if region == "nothing":
+            self.treeview.selection_remove(self.treeview.selection())
+        ## Do sort when click on a heading
+        elif region == "heading":
+            self.sort(event)
+        ## Do edit when click on a cell
+        elif region == "cell":
+            if self.callback_func.get("<Double-1>"):
+                self.callback_func.get("<Double-1>")(event)
+
+    def show_menu(self, event):
+        """show right click menu"""
+        item = self.treeview.identify_row(event.y)
+        if item:
+            if not self.treeview.selection():
+                self.treeview.selection_set(item)
+        self.treeview_menu.post(event.x_root, event.y_root)
+
+    def remove_selected_items(self):
+        selected_items = self.treeview.selection()
+        for item in selected_items:
+            self.treeview.delete(item)
+
+    def get_treeview(self):
+        return self.treeview
+
+
 class popupWindow(object):
     def __init__(self, master, title="popupWindow"):
         self.exit_result = False
@@ -37,11 +158,11 @@ class popupWindow(object):
         popup_y = master_y + (master_height - popup_height) // 2
         self.popup.geometry(f"+{popup_x}+{popup_y}")
 
-    def create_input_field(self, label_text, var, row, column):
+    def create_input_field(self, label_text, var, row, column, width=None):
         label = ttk.Label(self.popup, text=label_text)
         label.grid(row=row, column=column, padx=5, pady=5, sticky="e")
 
-        entry = ttk.Entry(self.popup, textvariable=var)
+        entry = ttk.Entry(self.popup, textvariable=var, width=width)
         entry.grid(row=row, column=column+1, padx=5, pady=5, sticky="w")
 
     def save_and_exit(self):
@@ -114,7 +235,6 @@ class popupWindow_Configure(popupWindow):
 
         self.save_and_exit()
 
-
 class popupWindow_Ping(popupWindow):
     def __init__(self, master, ping_config: dict):
         super().__init__(master, "Ping Parameters")
@@ -149,14 +269,12 @@ class popupWindow_Ping(popupWindow):
 
         self.save_and_exit()
 
-
-class popupWindow_SCP(popupWindow):
+class popupWindow_SCP_Setting(popupWindow):
     def __init__(self, master, scp_config: dict):
         super().__init__(master, "SCP Setting")
         self.scp_config = scp_config
         
         self.storage_folder = tk.StringVar(value=scp_config["storage_folder"])
-        self.config_name = tk.StringVar(value=scp_config["config_name"])
 
         ## Create UI
         self.create_ui()
@@ -165,55 +283,174 @@ class popupWindow_SCP(popupWindow):
         self.initial_position(master)
 
     def create_ui(self):
-        self.create_input_field("Storage Folder:", self.storage_folder, 0, 0)
-        self.create_input_field("Config Name:", self.config_name, 1, 0)
+        self.create_input_field("Storage Folder:", self.storage_folder, 0, 0, 50)
 
+        table_title = ttk.Label(self.popup,
+                                text="Variable Table:",
+                                style="my.TLabel")
+        table_title.grid(row=1, column=0, padx=5, pady=5)
+
+        table_frame = ttk.Frame(self.popup)
+        table_frame.grid(row=2, column=0, columnspan=3, padx=10, pady=0, sticky=tk.W)
+
+        self.variable_treeview = ttk.Treeview(table_frame, selectmode="extended", style="my.Treeview", height=10)
+
+        self.variable_treeview["columns"] = ("variable", "value")
+        self.variable_treeview.column("variable", width=150, minwidth=150, stretch=True, anchor="center")
+        self.variable_treeview.column("value",    width=300, minwidth=300, stretch=True, anchor="center")
+
+        self.variable_treeview["show"] = "headings"
+        self.variable_treeview.heading('variable', text="Variable")
+        self.variable_treeview.heading('value', text="Value")
+        self.variable_treeview.pack(expand=1, fill=tk.BOTH, pady=0)
+
+        self.variable_treeview.tag_configure("readonly", background="lightgray")
+        self.variable_treeview.tag_configure("lock")
+
+        ## initial treeview values
+        for key, value in self.scp_config["variables"].items():
+            self.variable_treeview.insert("", "end", values=(key, value["value"]), tags=value["tags"])
+
+        ## event handel binding 
+        def validate_input(input_field, input_text):
+            def validate_variable_name(text):
+                l = [self.variable_treeview.set(item)["variable"] 
+                        for item in self.variable_treeview.get_children('')]
+                return text and text not in l
+
+            if input_field == "Variable":
+                if not validate_variable_name(input_text):
+                    return False
+
+            return True
+
+        def edit_treeview_item(event):
+            item = self.variable_treeview.identify_row(event.y)
+            column = self.variable_treeview.identify_column(event.x)
+            
+            if 'readonly' in self.variable_treeview.item(item, "tags"):
+                return
+            if item:
+                self.variable_treeview.item(item, tags=('lock',))
+
+                validate_callback = validate_input
+                entryPopup = TreeviewEditEntry(self.variable_treeview, item, column, validate_callback)
+
+                self.popup.wait_window(entryPopup.edit_entry)
+                new_text = entryPopup.input_txt
+                if entryPopup.exit_result:
+                    self.variable_treeview.set(item, column, value=new_text)
+                self.variable_treeview.item(item, tags=())
+
+        def remove_selected_items():
+            selected_items = self.variable_treeview.selection()
+            for item in selected_items:
+                if 'readonly' in self.variable_treeview.item(item, "tags"):
+                    continue
+                if 'lock' in self.variable_treeview.item(item, "tags"):
+                    continue
+                self.variable_treeview.delete(item)
+
+        def add_variable_treeview_item():
+            input_field_dict = {"Variable": tk.StringVar(), "Value": tk.StringVar()}
+            popupWin = popupWindow_input_fields(self.variable_treeview,
+                                                "Add Item",
+                                                input_field_dict=input_field_dict,
+                                                validate_callback=validate_input)
+            self.popup.wait_window(popupWin.popup)
+
+            new_item = (*popupWin.input_field_dict.values(),)
+            if popupWin.exit_result and new_item:
+                self.variable_treeview.insert("", "end", values=new_item)
+
+        callback_dict = {"<Double-1>": edit_treeview_item}
+        menu_callback_dict = {"Add": add_variable_treeview_item, "Remove": remove_selected_items}
+        myTreeviewBindSetter(self.variable_treeview, callback_dict, menu_callback_dict).binding()
+
+        ## Submit Button
         submit_button = ttk.Button(self.popup, text="Submit", command=self.save_configuration)
-        submit_button.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+        submit_button.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
 
     def save_configuration(self):
-        self.scp_config = {"storage_folder": self.storage_folder.get(),
-                            "config_name": self.config_name.get()}
+        storage_folder = os.path.abspath(self.storage_folder.get())
+        if not os.path.isdir(storage_folder):
+            messagebox.showerror("Error", f"'{storage_folder}' is not a folder.", parent=self.popup)
+            return
+
+        self.scp_config = {"storage_folder": self.storage_folder.get()}
+
+        result_dict = {}
+        for row in self.variable_treeview.get_children():
+            key = self.variable_treeview.item(row, "values")[0]
+            value = self.variable_treeview.item(row, "values")[1]
+            tags = self.variable_treeview.item(row, "tags")
+            result_dict[key] = {"value": value, "tags": tags}
+
+        self.scp_config["variables"] = result_dict
 
         self.save_and_exit()
 
-class popupWindow_ComboBox(popupWindow):
-    def __init__(self, master, value_list: list):
+
+class popupWindow_SCP(popupWindow):
+    ## record last time combobox index
+    COMBOBOX_IDX = {"download": 0, "upload": 0}
+
+    def __init__(self, master, action, folder_path):
         super().__init__(master, "Select a config")
-        self.target = None
-        self.value_list = value_list
+        self.target_config = None
+        self.config_list = self.get_config_file_list(folder_path, action)
+        self.action = action
 
         ## Create UI
         self.create_ui()
 
         ## Popup position
         self.initial_position(master)
+
+    def get_config_file_list(self, folder_path, action):
+        file_pattern = f"^{action}.*\.json$"
+        return [os.path.splitext(file)[0] for file in os.listdir(folder_path) if re.match(file_pattern, file)]
+
+    def on_combobox_keyrelease(self, event):
+        # 获取用户输入
+        user_input = self.combo_box.get()
+        filtered_configs = [config for config in self.config_list if user_input.lower() in config.lower()]
+        self.combo_box["values"] = filtered_configs
+
 
     def create_ui(self):
         config_label = ttk.Label(self.popup, text="Config:")
         config_label.grid(row=0, column=0, padx=5, pady=5)
         self.combo_box = ttk.Combobox(self.popup,
-                    width=15,
-                    values=self.value_list)
+                    width=25,
+                    values=self.config_list,
+                    font=("Helvetica", 12))
+
+        self.combo_box.bind("<KeyRelease>", self.on_combobox_keyrelease)
+        self.combo_box.bind('<Return>', lambda event: self.combo_box.event_generate('<Down>'))
+        if len(self.config_list):
+            self.combo_box.current(popupWindow_SCP.COMBOBOX_IDX[self.action])
         self.combo_box.grid(row=0, column=1, padx=5, pady=5)
 
         submit_button = ttk.Button(self.popup, text="Submit", command=self.save_configuration)
         submit_button.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
     def save_configuration(self):
-        self.target = self.combo_box.get()
-
+        self.target_config = self.combo_box.get()
+        popupWindow_SCP.COMBOBOX_IDX[self.action] = self.combo_box.current()
         self.save_and_exit()
 
-class popupWindow_Add_scan_item(popupWindow):
-    def __init__(self, master):
-        super().__init__(master, "Add scan item")
+class popupWindow_input_fields(popupWindow):
+    """Generate the simple input fields type popup window"""
+    def __init__(self, master, title="Input Fields", input_field_dict={}, validate_callback=None):
+        super().__init__(master, title)
         
-        self.new_item_value = ()
+        self.input_field_dict = input_field_dict
 
-        self.ip = tk.StringVar()
-        self.mac = tk.StringVar()
-        self.model = tk.StringVar()
+        for k, v in input_field_dict.items():
+            setattr(self, k, v)
+
+        self.validate_callback = validate_callback
 
         ## Create UI
         self.create_ui()
@@ -222,23 +459,25 @@ class popupWindow_Add_scan_item(popupWindow):
         self.initial_position(master)
 
     def create_ui(self):
-        self.create_input_field("IP:", self.ip, 0, 0)
-        self.create_input_field("MAC:", self.mac, 1, 0)
-        self.create_input_field("Model:", self.model, 2, 0)
+        for i, k in enumerate(self.input_field_dict):
+            self.create_input_field(f"{k}:", getattr(self, k), i, 0)
 
         submit_button = ttk.Button(self.popup, text="Submit", command=self.save_configuration)
         submit_button.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
 
+    def validate_input(self, input_field, input_text):
+        if self.validate_callback:
+            return self.validate_callback(input_field, input_text)
+        return True
+
     def save_configuration(self):
-        if not cyl_util.is_valid_IP(self.ip.get()):
-            messagebox.showerror("Error", "Invalid IP !", parent=self.popup)
-            return
 
-        if self.mac.get() and not cyl_util.is_valid_MAC(self.mac):
-            messagebox.showerror("Error", "Invalid MAC !", parent=self.popup)
-            return
+        for k in self.input_field_dict:
+            if not self.validate_input(k, getattr(self, k).get()):
+                messagebox.showerror("Error", f"Invalid {k} !", parent=self.popup)
+                return
 
-        self.new_item_value = (self.ip.get(), self.mac.get(), self.model.get(), 0)
+        self.input_field_dict = {k: getattr(self, k).get() for k in self.input_field_dict}
 
         self.save_and_exit()
 
@@ -312,9 +551,9 @@ class popupWindow_LGW_Cmd(popupWindow):
                                 font=("Helvetica", 12))
             self.text.pack(padx=5, pady=5, fill="both", expand=True)
         elif self.action == "Edit":
-            self.entry = ttk.Entry(self.popup, width=70)
+            self.entry = ttk.Entry(self.popup, width=100)
             self.entry.insert(tk.END, self.lgw_cmd_list[0])
-            self.entry.pack(padx=5, pady=5)
+            self.entry.pack(padx=5, pady=5, fill="both", expand=True)
 
         submit_button = ttk.Button(self.popup, text=f"{self.action}", command=self.save_configuration)
         submit_button.pack(padx=5, pady=5)
@@ -354,9 +593,12 @@ class MyApp(ctk.CTk):
         self.OS_connection_mode = "SSH"
 
         ## for SCP
-        self.scp_config = {}
-        self.scp_config["download"] = {"storage_folder": "storage", "config_name": "download"}
-        self.scp_config["upload"] = {"storage_folder": "storage", "config_name": "upload"}
+        self.scp_config = {"storage_folder": "storage", "variables":
+        {
+            "IP": {"value": "<Scan table 'IP' value.>", "tags": ['readonly']},
+            "MAC": {"value": "<Scan table 'MAC' value>", "tags": ['readonly']},
+            "MODEL": {"value": "<Scan table 'Model' value>", "tags": ['readonly']}
+        }}
 
         ## for OS cmd
         self.default_OS_cmd_timeout_sec = 10
@@ -376,7 +618,13 @@ class MyApp(ctk.CTk):
         self.ping_items = []
 
         self.initUI(theme=theme)
+
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
         
+    def on_closing(self):
+        self.output_default_content()
+        self.destroy()
+
     def is_thread_alive(self, key):
         return self.process_threads.get(key) and self.process_threads.get(key).is_alive()
 
@@ -394,7 +642,7 @@ class MyApp(ctk.CTk):
         ## Keep it top.
         # self.attributes("-topmost", 1)
 
-        ## Style
+        ## Widget Style
         self.style = ThemedStyle()
 
         # print(self.style.theme_names())
@@ -447,9 +695,18 @@ class MyApp(ctk.CTk):
         self.refresh_window_status()
 
     def load_default_content(self):
+        if SCP_Setting := cyl_util.load_config_json(os.path.join('recall','SCP_Setting.json')):
+            self.scp_config = SCP_Setting
 
-        LGW_content = cyl_util.load_config_json(os.path.join('commands','LGW_Cmds.json'))
-        OS_content = cyl_util.load_config_json(os.path.join('commands','OS_Cmds.json'))
+        if Scan_items := cyl_util.load_config_json(os.path.join('recall','Scan_items.json')):
+            for item_info in Scan_items:
+                text = item_info["text"]
+                values = item_info["values"]
+                self.scan_treeview.insert("", "end", text=text, values=values)
+        # self.scp_config
+
+        LGW_content = cyl_util.load_config_json(os.path.join('recall','LGW_Cmds.json'))
+        OS_content = cyl_util.load_config_json(os.path.join('recall','OS_Cmds.json'))
 
         if LGW_content:
             for cmd in LGW_content.get("command_templates", []):
@@ -476,6 +733,43 @@ class MyApp(ctk.CTk):
             self.default_OS_cmd_timeout_sec = OS_content.get("timeout_sec", self.default_OS_cmd_timeout_sec)
             self.os_cmd_timeout_entry.delete(0, tk.END)
             self.os_cmd_timeout_entry.insert(0, str(self.default_OS_cmd_timeout_sec))
+
+
+    def output_default_content(self):
+
+        os_cmd_json = {"operations":[], "timeout_sec": int(self.os_cmd_timeout_entry.get())}
+        for item in self.os_cmd_treeview.get_children():
+            label = self.os_cmd_treeview.set(item, "operation")
+            text = self.os_cmd_treeview.item(item, "text")
+            os_cmd = {"label": label}
+            os_cmd["commands"] = text.split('\n')
+            os_cmd_json["operations"].append(os_cmd)
+        
+
+        lgw_cmd_json = {"command_templates":[],
+                        "channels": self.channel_list_entry.get(),
+                        "timeout_sec": int(self.lgw_cmd_timeout_entry.get())}
+
+        for item in self.lgw_cmd_treeview.get_children():
+            command = self.lgw_cmd_treeview.set(item, "command")
+            lgw_cmd = cyl_util.content9528_to_dict(command)
+            lgw_cmd_json["command_templates"].append(lgw_cmd)
+
+        cyl_util.output_config_json(os_cmd_json, os.path.join('recall','OS_Cmds.json'))
+        cyl_util.output_config_json(lgw_cmd_json, os.path.join('recall','LGW_Cmds.json'))
+        cyl_util.output_config_json(self.scp_config, os.path.join('recall','SCP_Setting.json'))
+
+        scan_items = []
+        for item in self.scan_treeview.get_children():
+            item_data = self.scan_treeview.item(item)
+            item_info = {
+                "text": item_data["text"],
+                "values": item_data["values"]
+            }
+            scan_items.append(item_info)
+
+        cyl_util.output_config_json(scan_items, os.path.join('recall','Scan_items.json'))
+
 
     def disableChildren(self, parent):
 
@@ -525,6 +819,8 @@ class MyApp(ctk.CTk):
         self.ip_range_entry = tk.Entry(base_frame)
         self.ip_range_entry.config(disabledbackground="#dddddd")
         self.ip_range_entry.insert(tk.END, "192.168.48.0/21")  # Set default value
+        self.ip_range_entry.bind('<Return>', lambda event: self.btn_click_scan())
+
 
         # Scan button
         scan_button = ttk.Button(base_frame,
@@ -545,36 +841,47 @@ class MyApp(ctk.CTk):
         ## Scan table
         table_frame = ttk.Frame(base_frame)
         table_frame.grid(row=2, column=0, columnspan=3, padx=10, pady=0, sticky=tk.W)
-        ttk.Style().configure("my.Treeview")
+        # ttk.Style().configure("my.Treeview")
         # ttk.Style().map("my.Treeview",
         #         background=[("selected", "#2a6cdd")],
         #         foreground=[("selected", "white")])
 
         style_value = ttk.Style()
-        style_value.configure("Treeview", rowheight=25, font=("Helvetica", 12))
+        style_value.configure("my.Treeview", rowheight=25, font=("Helvetica", 12))
 
         self.scan_treeview = ttk.Treeview(table_frame, selectmode="extended", style="my.Treeview", height=10)
 
-        # self.scan_treeview["columns"] = ("ip", "mac", "model-id", "commit-id", "os", "lgw", "product-id", "ping")s
-        self.scan_treeview["columns"] = ("ip", "mac", "model-id", "ping")
+        self.scan_treeview["columns"] = ("ip", "mac", "model-id", "ping", "os", "restart server", "restart network", "ota", "commit-id", "light gateway", "product-id")
+        # self.scan_treeview["columns"] = ("ip", "mac", "model-id", "ping")
         self.scan_treeview.column("ip",         width=138, minwidth=138, stretch=True, anchor="center")
         self.scan_treeview.column("mac",        width=138, minwidth=138, stretch=True, anchor="center")
         self.scan_treeview.column("model-id",   width=138, minwidth=138, stretch=True, anchor="center")
-        # self.scan_treeview.column("commit-id",  width=0, minwidth=0, stretch=True, anchor="center")
-        # self.scan_treeview.column("os",         width=0, minwidth=0, stretch=True, anchor="center")
-        # self.scan_treeview.column("lgw",        width=0, minwidth=0, stretch=True, anchor="center")
-        # self.scan_treeview.column("product-id",    width=0, minwidth=0, stretch=True, anchor="center")
         self.scan_treeview.column("ping",       width=138, minwidth=138, stretch=True, anchor="center")
 
+        self.scan_treeview.column("os",                 width=0, minwidth=0, stretch=True, anchor="center")
+        self.scan_treeview.column("restart server",     width=0, minwidth=0, stretch=True, anchor="center")
+        self.scan_treeview.column("restart network",    width=0, minwidth=0, stretch=True, anchor="center")
+        self.scan_treeview.column("ota",                width=0, minwidth=0, stretch=True, anchor="center")
+        self.scan_treeview.column("commit-id",          width=0, minwidth=0, stretch=True, anchor="center")
+        self.scan_treeview.column("light gateway",      width=0, minwidth=0, stretch=True, anchor="center")
+        self.scan_treeview.column("product-id",         width=0, minwidth=0, stretch=True, anchor="center")
+
+
         self.scan_treeview["show"] = "headings"
+        self.scan_treeview["displaycolumns"] = ("ip", "mac", "model-id", "ping")
         self.scan_treeview.heading('ip',        text="IP")
         self.scan_treeview.heading('mac',       text="MAC")
         self.scan_treeview.heading('model-id',  text="Model")
-        # self.scan_treeview.heading('commit-id',  text="FW")
-        # self.scan_treeview.heading('os',        text="OS")
-        # self.scan_treeview.heading('lgw',       text="LGW")
-        # self.scan_treeview.heading('product-id',  text="Product")
         self.scan_treeview.heading('ping',      text="Ping")
+        
+        self.scan_treeview.heading('os',               text="OS")
+        self.scan_treeview.heading('restart server',   text="RS")
+        self.scan_treeview.heading('restart network',  text="RN")
+        self.scan_treeview.heading('ota',              text="OTA")
+        self.scan_treeview.heading('commit-id',        text="FW")
+        self.scan_treeview.heading('light gateway',    text="LGW")
+        self.scan_treeview.heading('product-id',       text="Product")
+
         self.scan_treeview.pack(expand=1, fill=tk.BOTH, pady=0)
         self.scan_treeview.bind("<Double-1>", self.scan_treeview_db_click)
 
@@ -584,24 +891,50 @@ class MyApp(ctk.CTk):
             self.scan_treeview_lock.acquire()
             for item in selected_items:
                 self.scan_treeview.delete(item)
+            self.refresh_window_status()
             self.scan_treeview_lock.release()
     
         def add_scan_treeview_item():
-            popupWin = popupWindow_Add_scan_item(self)
+            def validate_callback(input_field, input_text):
+                if input_field == "IP":
+                    if not cyl_util.is_valid_IP(input_text):
+                        return False
+                elif input_field == "MAC":
+                    if input_text and not cyl_util.is_valid_MAC(input_text):
+                        return False
+
+                return True
+
+            input_field_dict = {"IP": tk.StringVar(value="192.168."), "MAC": tk.StringVar(), "Model": tk.StringVar()}
+            popupWin = popupWindow_input_fields(self, "Add Item", input_field_dict=input_field_dict, validate_callback=validate_callback)
             self.wait_window(popupWin.popup)
 
-            new_item = popupWin.new_item_value
+            new_item = (*popupWin.input_field_dict.values(), 0)
+            self.scan_treeview_lock.acquire()
             if popupWin.exit_result and new_item:
                 self.scan_treeview.insert("", "end", values=new_item)
+
+            self.refresh_window_status()
+            self.scan_treeview_lock.release()
+
+        def clear_scan_treeview_item_text():
+            selected_items = self.scan_treeview.selection()
+            self.scan_treeview_lock.acquire()
+            for item in selected_items:
+                self.scan_treeview.item(item, text="")
+            self.scan_treeview_lock.release()
 
         self.scan_treeview_menu = tk.Menu(self.scan_treeview, tearoff=0)
         self.scan_treeview_menu.add_command(label="Remove",
                                             command=remove_scan_treeview_item)
         self.scan_treeview_menu.add_command(label="Add",
                                             command=add_scan_treeview_item)
+        self.scan_treeview_menu.add_command(label="Clear history",
+                                            command=clear_scan_treeview_item_text)
 
         ## scan_treeview_ping_menu
         def join_ping(flag):
+            """Let selected items join the ping process"""
             selected_items = self.scan_treeview.selection()
             self.ping_btn_lock.acquire()
 
@@ -625,14 +958,15 @@ class MyApp(ctk.CTk):
             if item:
                 if not self.scan_treeview.selection():
                     self.scan_treeview.selection_set(item)
-                if self.is_thread_alive("Ping"):
-                    self.scan_treeview_ping_menu.post(event.x_root, event.y_root)
-                else:
-                    self.scan_treeview_menu.post(event.x_root, event.y_root)
+            if self.is_thread_alive("Ping"):
+                self.scan_treeview_ping_menu.post(event.x_root, event.y_root)
+            else:
+                self.scan_treeview_menu.post(event.x_root, event.y_root)
 
         self.scan_treeview.bind("<Button-3>", show_scan_treeview_menu)
 
         def copy(event):
+            """copy the selected item's values by 'ctrl+c'."""
             selected_items = self.scan_treeview.selection() # get selected items
             self.clipboard_clear()  # clear clipboard
             # copy headers
@@ -641,6 +975,7 @@ class MyApp(ctk.CTk):
             for item in selected_items:
                 # retrieve the values of the row
                 values = self.scan_treeview.item(item, 'values')
+                values = [str(v) for v in values]
                 # values.extend(*self.scan_treeview.item(item, 'values'))
                 # append the values separated by \t to the clipboard
                 self.clipboard_append("\t".join(values) + "\n")
@@ -667,19 +1002,20 @@ class MyApp(ctk.CTk):
                                  style="my.TButton",
                                  command=popup_configure_window)
         self.device_info_button = ttk.Button(base_frame,
-                                 text="Get device info",
+                                 text="Get Device Info",
                                  style="my.TButton",
-                                 command=self.btn_click_get_device_info)
+                                 command=self.btn_click_get_devices_info)
         self.ping_alive_button = ttk.Button(base_frame,
                                  text=f"Ping({self.ping_counter})",
                                  style="my.TButton",
                                  command=lambda: self.btn_click_toggle_ping())
 
         def popup_scp_setting_window():
-            popupWin = popupWindow_ComboBox(self, self.scp_config)
+            popupWin = popupWindow_SCP_Setting(self, self.scp_config)
             self.wait_window(popupWin.popup)
             if popupWin.exit_result:
                 self.scp_config = popupWin.scp_config
+            # print(self.scp_config)
             return popupWin.exit_result
 
         self.scp_option_button = ttk.Button(base_frame,
@@ -688,11 +1024,11 @@ class MyApp(ctk.CTk):
                                  command=lambda: popup_scp_setting_window())
                                  
         self.upload_button = ttk.Button(base_frame,
-                                 text="SCP upload",
+                                 text="SCP Upload",
                                  style="my.TButton",
                                  command=lambda: self.btn_click_scp("upload"))
         self.download_button = ttk.Button(base_frame,
-                                 text="SCP download",
+                                 text="SCP Download",
                                  style="my.TButton",
                                  command=lambda: self.btn_click_scp("download"))
 
@@ -741,24 +1077,30 @@ class MyApp(ctk.CTk):
         self.output_text.tag_configure("red", foreground="red", font=("Helvetica", 12, "italic"))
         self.output_text.tag_configure("history", foreground="#224581", font=("Helvetica", 12, "italic"))
         self.output_text.tag_configure("title", foreground="black", font=("Helvetica", 12, "bold"))
+        self.output_text.tag_configure("progress", foreground="#fc7a18", font=("Helvetica", 12, "underline"))
 
         ## Input Cmd Tab
         input_cmd_tab_frame = ttk.Frame(tab_control)
 
-        self.os_cmd_treeview = ttk.Treeview(input_cmd_tab_frame, columns=("operation"))
+        self.os_cmd_treeview = ttk.Treeview(input_cmd_tab_frame, columns=("operation"), style='my.Treeview')
 
         self.os_cmd_treeview["show"] = "headings"
         self.os_cmd_treeview.heading("operation", text="Operation Label")
 
-        self.os_cmd_treeview.bind("<Double-1>", self.os_cmd_tvw_db_click)
+        def edit_os_cmd_treeview_item(event):
+            selected_item = self.os_cmd_treeview.selection()
+            if selected_item:
+                label = self.os_cmd_treeview.set(selected_item)["operation"]
+                old_text = self.os_cmd_treeview.item(selected_item,"text")
+                popupWin = popupWindow_OS_Cmd(self, "Edit", config_value={"label": label, "text": old_text})
+                self.wait_window(popupWin.popup)
+                if popupWin.exit_result:
+                    config_value = popupWin.config_value
+                    self.os_cmd_treeview.item(selected_item, values=(config_value['label'],), text=config_value['text'])
 
-        self.os_cmd_treeview_menu = tk.Menu(self.os_cmd_treeview, tearoff=0)
-        self.os_cmd_treeview_menu.add_command(label="Remove", command=lambda: self.remove_selected_treeview_items(self.os_cmd_treeview))
-
-        def show_os_cmd_treeview_menu(event):
-            return self.show_cmd_treeview_menu(self.os_cmd_treeview, self.os_cmd_treeview_menu, event)
-
-        self.os_cmd_treeview.bind("<Button-3>", show_os_cmd_treeview_menu)
+        callback_dict = {"<Double-1>": edit_os_cmd_treeview_item}
+        # menu_callback_dict = {"Add": add_variable_treeview_item}
+        myTreeviewBindSetter(self.os_cmd_treeview, callback_dict).binding()
 
         add_os_operation_button = ttk.Button(input_cmd_tab_frame,
                                         text="Add",
@@ -774,11 +1116,6 @@ class MyApp(ctk.CTk):
         self.os_cmd_timeout_entry = ttk.Entry(input_cmd_tab_frame, width=10)
         self.os_cmd_timeout_entry.insert(0, str(self.default_OS_cmd_timeout_sec))
 
-        # send_button = ttk.Button(input_cmd_tab,
-        #                          text="Send OS Cmd",
-        #                          style="my.TButton",
-        #                          command=self.send_Telnet_command)
-
         ## Arrange Input Cmd Tab
         self.os_cmd_treeview.pack(expand=1, fill="both", padx=10, pady=5)
         add_os_operation_button.pack(side="right", padx=10, pady=5)
@@ -790,20 +1127,25 @@ class MyApp(ctk.CTk):
 
         ## lgw Cmd Tab
         lgw_cmd_tab_frame = ttk.Frame(tab_control)
-        self.lgw_cmd_treeview = ttk.Treeview(lgw_cmd_tab_frame, columns=("command"))
+        self.lgw_cmd_treeview = ttk.Treeview(lgw_cmd_tab_frame, columns=("command"), style='my.Treeview')
 
         self.lgw_cmd_treeview["show"] = "headings"
         self.lgw_cmd_treeview.heading("command", text="Command Template")
 
-        self.lgw_cmd_treeview.bind("<Double-1>", self.lgw_cmd_tvw_db_click)
+        def edit_lgw_cmd_treeview_item(event):
+            selected_item = self.lgw_cmd_treeview.selection()
+            if selected_item:
+                old_text = self.lgw_cmd_treeview.set(selected_item)["command"]
+                popupWin = popupWindow_LGW_Cmd(self, "Edit", initialvalue=old_text)
+                self.wait_window(popupWin.popup)
+                if popupWin.exit_result:
+                    new_text = popupWin.lgw_cmd_list[0]
+                    self.lgw_cmd_treeview.item(selected_item, values=(new_text,))
 
-        self.lgw_cmd_treeview_menu = tk.Menu(self.lgw_cmd_treeview, tearoff=0)
-        self.lgw_cmd_treeview_menu.add_command(label="Remove", command=lambda: self.remove_selected_treeview_items(self.lgw_cmd_treeview))
 
-        def show_lgw_cmd_treeview_menu(event):
-            return self.show_cmd_treeview_menu(self.lgw_cmd_treeview, self.lgw_cmd_treeview_menu, event)
-
-        self.lgw_cmd_treeview.bind("<Button-3>", show_lgw_cmd_treeview_menu)
+        callback_dict = {"<Double-1>": edit_lgw_cmd_treeview_item}
+        # menu_callback_dict = {"Add": add_variable_treeview_item}
+        myTreeviewBindSetter(self.lgw_cmd_treeview, callback_dict).binding()
 
         add_button = ttk.Button(lgw_cmd_tab_frame,
                                 text="Add",
@@ -852,73 +1194,6 @@ class MyApp(ctk.CTk):
         if popupWin.exit_result:
             config_value = popupWin.config_value
             self.os_cmd_treeview.insert("", "end", values=(config_value["label"],), text=config_value["text"])
-
-    def remove_selected_treeview_items(self, treeview):
-        selected_items = treeview.selection()
-        for item in selected_items:
-            treeview.delete(item)
-
-    def treeview_sort(self, treeview, event):
-        col_id = treeview.identify('column', event.x, event.y)
-
-        rows = [(str(treeview.set(item, col_id)).lower(), item) 
-                    for item in treeview.get_children('')]
-        rows.sort()
-
-        for index, (values, item) in enumerate(rows):
-            treeview.move(item, '', index)
-
-    def os_cmd_tvw_db_click(self, event):
-
-        def edit_os_cmd_treeview_item():
-            selected_item = self.os_cmd_treeview.selection()
-            if selected_item:
-                label = self.os_cmd_treeview.set(selected_item)["operation"]
-                old_text = self.os_cmd_treeview.item(selected_item,"text")
-                popupWin = popupWindow_OS_Cmd(self, "Edit", config_value={"label": label, "text": old_text})
-                self.wait_window(popupWin.popup)
-                if popupWin.exit_result:
-                    config_value = popupWin.config_value
-                    self.os_cmd_treeview.item(selected_item, values=(config_value['label'],), text=config_value['text'])
-
-        region = self.os_cmd_treeview.identify_region(event.x,event.y)
-        ## Sort
-        if region == "heading":
-            self.treeview_sort(self.os_cmd_treeview, event)
-        ## Edit
-        elif region == "cell":
-            edit_os_cmd_treeview_item()
-
-    # def treeview_remove_item(self, treeview, event):
-    #     item = treeview.identify('item', event.x, event.y)
-    #     treeview.delete(item)
-
-    def lgw_cmd_tvw_db_click(self, event):
-
-        def edit_lgw_cmd_treeview_item():
-            selected_item = self.lgw_cmd_treeview.selection()
-            if selected_item:
-                old_text = self.lgw_cmd_treeview.set(selected_item)["command"]
-                popupWin = popupWindow_LGW_Cmd(self, "Edit", initialvalue=old_text)
-                self.wait_window(popupWin.popup)
-                if popupWin.exit_result:
-                    new_text = popupWin.lgw_cmd_list[0]
-                    self.lgw_cmd_treeview.item(selected_item, values=(new_text,))
-
-        region = self.lgw_cmd_treeview.identify_region(event.x,event.y)
-        ## Sort
-        if region == "heading":
-            self.treeview_sort(self.lgw_cmd_treeview, event)
-        ## Edit
-        elif region == "cell":
-            edit_lgw_cmd_treeview_item()
-
-    def show_cmd_treeview_menu(self, cmd_treeview, menu, event):
-        item = cmd_treeview.identify_row(event.y)
-        if item:
-            if not cmd_treeview.selection():
-                cmd_treeview.selection_set(item)
-            menu.post(event.x_root, event.y_root)
 
     def btn_click_send_lgw_commands(self):
         selected_items = self.scan_treeview.selection()
@@ -1097,7 +1372,7 @@ class MyApp(ctk.CTk):
             return
 
         ## Disable scan button
-        self.output_text_insert(f"\nScan device start...")
+        self.output_text_insert(f"\nScan devices start...", "progress")
         self.disableChildren(self.ip_scan_frame)
         self.scan_treeview_lock.acquire()
         ## clear treeview
@@ -1175,45 +1450,101 @@ class MyApp(ctk.CTk):
                     self.scan_treeview.item(item, tags=("offline",))
                 self.scan_treeview_lock.release()
 
-    def scan_devices(self, networks):
+    def get_devices_info(self, hosts):
+        ## OS, RS, RN, OTA
+        cmd_dict = {"os": "cat /etc/os_version",
+                    "restart server": "cat /root/restart_server.sh|grep -Eom 1 'v[0-9]+\.[0-9]+\.[0-9]+'",
+                    "restart network": "cat /root/restart_network.sh|grep -Eom 1 'v[0-9]+\.[0-9]+\.[0-9]+'",
+                    "ota": "cat /root/ota.sh|grep -Eom 1 'v[0-9]+\.[0-9]+\.[0-9]+'",
+                    "mac": "flash get HW_NIC1_ADDR | cut -d '=' -f 2"}
+        
+        self.output_text_insert(f"\nGet devices info start...", "progress")
+        res = None
+        if self.OS_connection_mode == "Telnet":
+            res = asyncio.run(cyl_async_telnet.send_telnet_23cmds(hosts,
+                                                                    cmd_list=cmd_dict.values()))
+        elif self.OS_connection_mode == "SSH":
+            username = "root"
+            res = asyncio.run(cyl_async_ssh.send_ssh_cmds(hosts,
+                                                            username,
+                                                            self.ssh_password,
+                                                            cmd_list=cmd_dict.values()))
 
-        hosts = asyncio.run(scanner.async_scan_networks(networks))
+        device_info_dict={}
+        for host in hosts:
+            ip = host['ip']
+            device_info = {}
+            for i, cmd_return in enumerate(res[ip]):
+                key = list(cmd_dict.keys())[i]
+                device_info[key] = MyApp.OS_out_version_result_filter(cmd_return["result"])
+                if key == "mac" and not cyl_util.is_valid_MAC(host['mac']):
+                    host["mac"] = device_info[key]
+            device_info_dict[ip] = device_info
 
         cmd_template_list = []
         tid = cyl_util.make_target_id("", 0)
         cmd_template_list.append(cyl_util.make_cmd("read-attr", target_id=tid, attr="model-id"))
-        # cmd_template_list.append(cyl_util.make_cmd("read-attr", target_id=tid, attr="commit-id"))
-        # cmd_template_list.append(cyl_util.make_cmd("configure"))
+        cmd_template_list.append(cyl_util.make_cmd("read-attr", target_id=tid, attr="commit-id"))
+        cmd_template_list.append(cyl_util.make_cmd("configure"))
         res = asyncio.run(cyl_async_telnet.send_telnet_9528cmds(hosts, cmd_template_list=cmd_template_list))
 
-        # print(res)
-        # print(hosts)
-        ## Update treeview
-        self.scan_treeview_lock.acquire()
         for host in hosts:
             ip = host['ip']
             result = res[ip]
-            model_id = MyApp.telnet9528_out_result_filter(res[ip][0]["result"], "value")
-            # commit_id = MyApp.telnet9528_out_result_filter(result[1]["result"], "value")
-            # os_ver = MyApp.telnet9528_out_result_filter(res[ip][2]["result"], "os-version")
-            # lgw_ver = MyApp.telnet9528_out_result_filter(res[ip][2]["result"], "server-version")
-            # prod_id = MyApp.telnet9528_out_result_filter(res[ip][2]["result"], "product-id")
-            # self.scan_treeview.insert("", "end", values=(host['ip'], host['mac'], model_id, commit_id, os_ver, lgw_ver, prod_id, 0))
-            self.scan_treeview.insert("", "end", values=(host['ip'], host['mac'], model_id, 0))
-        self.scan_treeview_lock.release()
+            device_info_dict[ip]["model-id"] = MyApp.telnet9528_out_result_filter(result[0]["result"], "value")
+            device_info_dict[ip]["commit-id"] = MyApp.telnet9528_out_result_filter(result[1]["result"], "value")
+            device_info_dict[ip]["os"] = MyApp.telnet9528_out_result_filter(result[2]["result"], "os-version")
+            device_info_dict[ip]["light gateway"] = MyApp.telnet9528_out_result_filter(result[2]["result"], "server-version")
+            device_info_dict[ip]["product-id"] = MyApp.telnet9528_out_result_filter(result[2]["result"], "product-id")
+
+        self.output_text_insert(f"Get devices info finish!!!\n", "progress")
+        return device_info_dict
+
+    def scan_devices(self, networks):
+
+        hosts = asyncio.run(scanner.async_scan_networks(networks))
+
+        device_info_dict = self.get_devices_info(hosts)
+        # print(res)
+        # print(hosts)
+        ## Update treeview
+        for host in hosts:
+            ip = host['ip']
+            mac = cyl_util.format_MAC(device_info_dict[ip]['mac'])
+            if cyl_util.is_valid_MAC(mac):
+                mac = cyl_util.format_MAC(device_info_dict[ip]['mac']).upper()
+            if not cyl_util.is_valid_MAC(host['mac']):
+                host['mac'] = mac
+            item_values = (host['ip'], host['mac'],
+                            device_info_dict[ip]["model-id"],
+                            0,
+                            device_info_dict[ip]["os"],
+                            device_info_dict[ip]["restart server"],
+                            device_info_dict[ip]["restart network"],
+                            device_info_dict[ip]["ota"],
+                            device_info_dict[ip]["commit-id"],
+                            device_info_dict[ip]["light gateway"],
+                            device_info_dict[ip]["product-id"])
+            self.scan_treeview_lock.acquire()
+            self.scan_treeview.insert("", "end", values=item_values)
+            self.scan_treeview_lock.release()
 
         ## Enable ip scan frame
         self.enableChildren(self.ip_scan_frame)
         self.refresh_window_status()
         self.output_text_insert(f"Find {len(hosts)} devices.")
-        self.output_text_insert(f"Scan device finish!!!\n")
+        self.output_text_insert(f"Scan devices finish!!!\n", "progress")
 
 
     def scan_treeview_db_click(self, event):
         region = self.scan_treeview.identify_region(event.x,event.y)
 
+        if region == "nothing":
+            self.scan_treeview_lock.acquire()
+            self.scan_treeview.selection_remove(self.scan_treeview.selection())
+            self.scan_treeview_lock.release()
         ## Sort
-        if region == "heading":
+        elif region == "heading":
             col_id = self.scan_treeview.identify('column', event.x, event.y)
 
             rows = [(str(self.scan_treeview.set(item, col_id)).lower(), item) 
@@ -1235,64 +1566,46 @@ class MyApp(ctk.CTk):
                 self.output_text_insert(f"{text}", "history")
 
     
-    def btn_click_get_device_info(self):
+    def btn_click_get_devices_info(self):
         selected_items = self.scan_treeview.selection()
         if not selected_items:
             messagebox.showerror("Error", "No devices have been selected.", parent=self)
             return
 
-        def get_device_info():
-            ## OS, RS, RN, OTA
-            cmd_dict = {"OS": "cat /etc/os_version",
-                        "RS": "cat /root/restart_server.sh|grep -Eom 1 'v[0-9]+\.[0-9]+\.[0-9]+'",
-                        "RN": "cat /root/restart_network.sh|grep -Eom 1 'v[0-9]+\.[0-9]+\.[0-9]+'",
-                        "OTA": "cat /root/ota.sh|grep -Eom 1 'v[0-9]+\.[0-9]+\.[0-9]+'"}
+        def get_devices_info():
 
             hosts = [self.scan_treeview.set(item) for item in selected_items]
-            
-            self.output_text_insert(f"\nGet device info start...")
-            res = None
-            if self.OS_connection_mode == "Telnet":
-                res = asyncio.run(cyl_async_telnet.send_telnet_23cmds(hosts,
-                                                                      cmd_list=cmd_dict.values()))
-            elif self.OS_connection_mode == "SSH":
-                username = "root"
-                res = asyncio.run(cyl_async_ssh.send_ssh_cmds(hosts,
-                                                              username,
-                                                              self.ssh_password,
-                                                              cmd_list=cmd_dict.values()))
-            # print(res)
+            device_info_dict = self.get_devices_info(hosts)
 
-            device_info_dict={}
+            ## Update treeview
             for item in selected_items:
-                ip = self.scan_treeview.set(item)["ip"]
-                device_info = {}
-                for i, cmd_return in enumerate(res[ip]):
-                    device_info[list(cmd_dict.keys())[i]] = MyApp.OS_out_version_result_filter(cmd_return["result"])
-                device_info_dict[item] = device_info
-
-
-            cmd_template_list = []
-            tid = cyl_util.make_target_id("", 0)
-            cmd_template_list.append(cyl_util.make_cmd("read-attr", target_id=tid, attr="commit-id"))
-            cmd_template_list.append(cyl_util.make_cmd("configure"))
-            res = asyncio.run(cyl_async_telnet.send_telnet_9528cmds(hosts, cmd_template_list=cmd_template_list))
-
-            for item in selected_items:
-                ip = self.scan_treeview.set(item)["ip"]
-                result = res[ip]
-                device_info_dict[item]["FW"] = MyApp.telnet9528_out_result_filter(result[0]["result"], "value")
-                device_info_dict[item]["OS"] = MyApp.telnet9528_out_result_filter(result[1]["result"], "os-version")
-                device_info_dict[item]["LGW"] = MyApp.telnet9528_out_result_filter(result[1]["result"], "server-version")
-                device_info_dict[item]["Prod-id"] = MyApp.telnet9528_out_result_filter(result[1]["result"], "product-id")
-
-            self.output_text_insert(f"Get device info finish!!!\n")
+                host = self.scan_treeview.set(item)
+                ip = host['ip']
+                mac = cyl_util.format_MAC(device_info_dict[ip]['mac'])
+                if cyl_util.is_valid_MAC(mac):
+                    mac = cyl_util.format_MAC(device_info_dict[ip]['mac']).upper()
+                if not cyl_util.is_valid_MAC(host['mac']):
+                    host['mac'] = mac
+                item_values = (host['ip'], host['mac'],
+                                device_info_dict[ip]["model-id"],
+                                host['ping'],
+                                device_info_dict[ip]["os"],
+                                device_info_dict[ip]["restart server"],
+                                device_info_dict[ip]["restart network"],
+                                device_info_dict[ip]["ota"],
+                                device_info_dict[ip]["commit-id"],
+                                device_info_dict[ip]["light gateway"],
+                                device_info_dict[ip]["product-id"])
+                self.scan_treeview_lock.acquire()
+                self.scan_treeview.item(item, values=item_values)
+                self.scan_treeview_lock.release()
 
             ## show
             self.output_text_insert(f"\nGet device info:", "title")
             for item in selected_items:
                 device = self.scan_treeview.set(item)
-                res_text = [f"{k}\t{v}" for k, v in device_info_dict[item].items()]
+                ip = device['ip']
+                res_text = [f"{self.scan_treeview.heading(k, option='text')}\t{v}" for k, v in device_info_dict[ip].items()]
                 res_text = '\n'.join(res_text)
                 item_text = f"Device info:\n{res_text}"
                 title = f"{device['model-id']}\t{device['mac']}\t({device['ip']})"
@@ -1302,7 +1615,8 @@ class MyApp(ctk.CTk):
                 ## update item history
                 self.update_history_text(item, item_text)
 
-        self.process_threads["get_device_info"] = threading.Thread(target=get_device_info)
+
+        self.process_threads["get_device_info"] = threading.Thread(target=get_devices_info)
         self.process_threads["get_device_info"].daemon = True
         self.process_threads["get_device_info"].start()
 
@@ -1351,7 +1665,7 @@ class MyApp(ctk.CTk):
                 interval=self.ping_config.get("interval", 0.2)
                 timeout=self.ping_config.get("timeout", 1)
 
-                self.output_text_insert("\nPing start...")
+                self.output_text_insert("\nPing start...", "progress")
                 self.output_text_insert(f'Sends ({count}) packet(s) per ({interval}) sec, timeout:({timeout}) sec, schedule every ({schedule_sec}) sec.')
                 self.process_threads["Ping"] = threading.Thread(target=ping_loop, args=(schedule_sec, count, interval, timeout))
                 self.process_threads["Ping"].daemon = True
@@ -1362,7 +1676,7 @@ class MyApp(ctk.CTk):
         def stop_ping():
             if self.is_thread_alive("Ping"):
                 self.is_pinging = False
-                self.output_text_insert(f"Ping stop!!!\n")
+                self.output_text_insert(f"Ping stop!!!\n", "progress")
 
                 self.ping_btn_lock.acquire()
                 self.ping_items = []
@@ -1381,10 +1695,10 @@ class MyApp(ctk.CTk):
             return
 
         def popup_scp_setting_window(action):
-            popupWin = popupWindow_SCP(self, self.scp_config[action])
+            popupWin = popupWindow_SCP(self, action, self.scp_config.get("storage_folder", "storage"))
             self.wait_window(popupWin.popup)
             if popupWin.exit_result:
-                self.scp_config[action] = popupWin.scp_config
+                self.scp_config["config_name"] = popupWin.target_config
             return popupWin.exit_result
 
         ## upload guard!
@@ -1403,18 +1717,21 @@ class MyApp(ctk.CTk):
             return
 
         def do_scp(action, storage, config_name):
-            remote_hosts = [self.scan_treeview.set(item)["ip"] for item in selected_items]
+            remote_hosts = [self.scan_treeview.set(item) for item in selected_items]
             username = "root"
             password = self.ssh_password
 
-            self.output_text_insert(f"\nSCP {action} start...")
+            hosts_config_variables = {k: v["value"] for k, v in self.scp_config["variables"].items()}
+
+            self.output_text_insert(f"\nSCP {action} start...", "progress")
             res = asyncio.run(cyl_async_ssh.scp_process(username, 
                                                         password,
                                                         remote_hosts,
                                                         action,
                                                         storage,
-                                                        config_name))
-            self.output_text_insert(f"SCP {action} finish!!!\n")
+                                                        config_name,
+                                                        hosts_config_variables))
+            self.output_text_insert(f"SCP {action} finish!!!\n", "progress")
             # print(res)
             ## show
             self.output_text_insert(f"SCP {action}:", "title")
@@ -1430,8 +1747,8 @@ class MyApp(ctk.CTk):
                 ## update item history
                 self.update_history_text(item, item_text)
 
-        storage = self.scp_config[action].get("storage_folder", "storage")
-        config_name = self.scp_config[action].get("config_name", "")
+        storage = self.scp_config.get("storage_folder", "storage")
+        config_name = self.scp_config.get("config_name", "")
 
         self.process_threads[f"SCP {action}"] = threading.Thread(target=do_scp, args=(action, storage, config_name))
         self.process_threads[f"SCP {action}"].daemon = True
@@ -1446,6 +1763,8 @@ class MyApp(ctk.CTk):
             self.ping_alive_button.configure(state='disabled')
             self.device_info_button.configure(state='disabled')
         else:
+            self.ping_alive_button.configure(state='normal')
+            self.device_info_button.configure(state='normal')
             if self.OS_connection_mode == "SSH":
                 self.scp_option_button.configure(state='normal')
                 self.upload_button.configure(state='normal')
@@ -1458,6 +1777,7 @@ class MyApp(ctk.CTk):
 
 a = MyApp()
 a.mainloop()
+
 
 
 # root = tk.Tk()

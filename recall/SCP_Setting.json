@@ -1,0 +1,36 @@
+{
+    "storage_folder": "storage",
+    "variables": {
+        "IP": {
+            "value": "<Scan table 'IP' value.>",
+            "tags": [
+                "readonly"
+            ]
+        },
+        "MAC": {
+            "value": "<Scan table 'MAC' value>",
+            "tags": [
+                "readonly"
+            ]
+        },
+        "MODEL": {
+            "value": "<Scan table 'Model' value>",
+            "tags": [
+                "readonly"
+            ]
+        },
+        "BINARY_FOLDER_PATH": {
+            "value": "D:/產測輔助程式/Binary",
+            "tags": []
+        },
+        "FW_FOLDER": {
+            "value": "Dimmer",
+            "tags": []
+        },
+        "MCU": {
+            "value": "STM32G030K8",
+            "tags": []
+        }
+    },
+    "config_name": "download"
+}

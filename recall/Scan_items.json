@@ -64,7 +64,7 @@
         ]
     },
     {
-        "text": "\nDevice info:\nOS\t0.3.24\nRS\tError\nRN\tError\nOTA\tError\nMAC\tError\nModel\tDIMMER\nFW\t20d10b3e\nLGW\t0.38.31\nProduct\tF6CDCXH00\n\nDevice info:\nOS\t0.3.24\nRS\tv0.2.6\nRN\tv0.2.1\nOTA\tv1.0.1\nMAC\td01411b001c0\nModel\tDIMMER\nFW\t20d10b3e\nLGW\t0.38.31\nProduct\tF6CDCXH00",
+        "text": "",
         "values": [
             "192.168.52.191",
             "D0:14:11:B0:01:C0",

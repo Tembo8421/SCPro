@@ -3,8 +3,10 @@
 python -m pip install -r requirements.txt
 
 2. 修改 upload or download 設定檔：
-上傳檔案請修改預設存儲庫'storage/' 下 'upload' 開頭的 JSON 檔案
-下載檔案請修改預設存儲庫'storage/' 下 'download' 開頭的 JSON 檔案
+    - 上傳檔案請編輯存儲庫下 'upload' 開頭的 JSON 檔案
+    - 下載檔案請編輯存儲庫下 'download' 開頭的 JSON 檔案
+    - 預設存儲庫: 'storage/'
+    - 可自行新增字定義設定檔，但請依照命名規則命名。
 
 JSON 檔參數說明：
 
@@ -105,11 +107,3 @@ JSON 檔參數說明：
 
     7. log 在 log目錄下以裝置分目錄
 
-4. Note:
-  - Package
-      pip install auto-py-to-exe
-
-      pyinstaller --noconfirm --onefile --windowed --add-data "D:/SCPro/core;core/" --add-data "D:/SCPro/network;network/" --add-data "D:/SCPro/scanner;scanner/" --add-data "D:/SCPro/arp-scan-windows;arp-scan-windows/" --hidden-import "win32timezone"  "D:/SCPro/scpro.py"
-
-  - tk UI reference
-      https://www.cnblogs.com/tommy-yu/p/4171006.html

@@ -19,7 +19,7 @@
                     "cmd": "sleep 1; ps | grep restart_server"
                 },
                 {
-                    "cmd": "cd /root/otaConfigFile; rm {MCU}.bin; ln -sf {FW_FOLDER}/*Debug*.bin {MCU}.bin"
+                    "cmd": "cd /root/otaConfigFile; rm {MCU}.bin; ln -sf {FW_FOLDER}/*.bin {MCU}.bin"
                 }
     ],
     "post_cmds": [
@@ -45,8 +45,8 @@
     "files": [
         {
             "update_or_not": true,
-            "name": "{FW_FOLDER}_setting.json",
-            "folder": "{FW_FOLDER}/",
+            "name": "{MCU}_setting.json",
+            "folder": "ota/",
             "target_path": "/root/otaConfigFile/setting.json"
         },
         {

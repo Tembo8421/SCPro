@@ -1229,6 +1229,7 @@ class MyApp(ctk.CTk):
                                                                     cmd_template_list=cmd_list,
                                                                     channel_list=channel_list,
                                                                     timeout=timeout_sec))
+            self.output_text_insert(f"Send LGW Cmds finish!!!\n", "progress")
             # print(res)
             ## show
             self.output_text_insert(f"\nSend LGW Cmd:", "title")
@@ -1262,6 +1263,8 @@ class MyApp(ctk.CTk):
                 ## update item history
                 self.update_history_text(item, item_text)
 
+
+        self.output_text_insert(f"\nSend LGW Cmds start...", "progress")
         self.process_threads["Send LGW Cmd"] = threading.Thread(target=send_lgw_commands)
         self.process_threads["Send LGW Cmd"].daemon = True
         self.process_threads["Send LGW Cmd"].start()
@@ -1306,6 +1309,7 @@ class MyApp(ctk.CTk):
                                                               cmd_list=cmd_list,
                                                               timeout=timeout_sec))
             # print(res)
+            self.output_text_insert(f"Send OS Cmds finish!!!\n", "progress")
             txt_bar = '----------------------'
             ## show
             self.output_text_insert(f"\nSend OS Cmd:", "title")
@@ -1327,6 +1331,7 @@ class MyApp(ctk.CTk):
                 ## update item history
                 self.update_history_text(item, item_text)
 
+        self.output_text_insert(f"\nSend OS Cmds start...", "progress")
         self.process_threads["Send OS Cmd"] = threading.Thread(target=send_OS_commands)
         self.process_threads["Send OS Cmd"].daemon = True
         self.process_threads["Send OS Cmd"].start()

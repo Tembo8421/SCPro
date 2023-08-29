@@ -21,16 +21,20 @@
         },
         "BINARY_FOLDER_PATH": {
             "value": "D:/產測輔助程式/Binary",
-            "tags": []
+            "tags": ""
         },
         "FW_FOLDER": {
-            "value": "Dimmer",
-            "tags": []
+            "value": "SS2",
+            "tags": ""
+        },
+        "FW_NAME": {
+            "value": "SS2_PWM_STM32G030K8.bin",
+            "tags": ""
         },
         "MCU": {
             "value": "STM32G030K8",
-            "tags": []
+            "tags": ""
         }
     },
-    "config_name": "download"
+    "config_name": "upload_ota"
 }

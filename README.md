@@ -107,3 +107,8 @@ JSON 檔參數說明：
 
     7. log 在 log目錄下以裝置分目錄
 
+4. Note:
+  - Package
+      pip install auto-py-to-exe
+
+      pyinstaller --noconfirm --onefile --windowed --add-data "D:/產測輔助程式/SCPro/core;core/" --add-data "D:/產測輔助程式/SCPro/network;network/" --add-data "D:/產測輔助程式/SCPro/scanner;scanner/" --add-data "D:/產測輔助程式/SCPro/arp-scan-windows;arp-scan-windows/" --hidden-import "win32timezone"  "D:/產測輔助程式/SCPro/scpro.py"

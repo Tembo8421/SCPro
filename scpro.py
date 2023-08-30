@@ -818,7 +818,7 @@ class MyApp(ctk.CTk):
         #                            style='my.TEntry')
         self.ip_range_entry = tk.Entry(base_frame)
         self.ip_range_entry.config(disabledbackground="#dddddd")
-        self.ip_range_entry.insert(tk.END, "192.168.48.0/21")  # Set default value
+        self.ip_range_entry.insert(tk.END, "172.16.50.0/24")  # Set default value
         self.ip_range_entry.bind('<Return>', lambda event: self.btn_click_scan())
 
 

@@ -259,24 +259,36 @@ async def async_telnet_send(host, port, cmd, **kwargs):
 
 async def async_send_cmd_list(host, port, cmd_list, **kwargs):
 
-    tasks = []
-    cmd_list = list(cmd_list)
-    for cmd in cmd_list:
-        task = async_telnet_send(host=host, port=port, cmd=cmd, **kwargs)
-        # task = telnet_send(host=host, port=port, cmd=cmd, **kwargs)
-        tasks.append(task) 
-    
-    # Waiting for all process done
     all_cmd_result = []
-    results = await asyncio.gather(*tasks)
-    # print(results)
-    for i, res in enumerate(results):
+    for cmd in cmd_list:
         res_dict = {}
-        res_dict['cmd'] = cmd_list[i]
+        res = await async_telnet_send(host=host, port=port, cmd=cmd, **kwargs)
+        res_dict['cmd'] = cmd
         res_dict['result'] = res
         all_cmd_result.append(res_dict)
+    # print(results)
     
     return all_cmd_result
+
+    # tasks = []
+    # cmd_list = list(cmd_list)
+
+    # for cmd in cmd_list:
+    #     task = async_telnet_send(host=host, port=port, cmd=cmd, **kwargs)
+    #     # task = telnet_send(host=host, port=port, cmd=cmd, **kwargs)
+    #     tasks.append(task) 
+    
+    # # Waiting for all process done
+    # all_cmd_result = []
+    # results = await asyncio.gather(*tasks)
+    # # print(results)
+    # for i, res in enumerate(results):
+    #     res_dict = {}
+    #     res_dict['cmd'] = cmd_list[i]
+    #     res_dict['result'] = res
+    #     all_cmd_result.append(res_dict)
+    
+    # return all_cmd_result
 
 ## =====================================================
 ## multi hosts, multi commands

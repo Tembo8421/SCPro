@@ -11,7 +11,8 @@ from tkinter import messagebox, ttk
 import customtkinter as ctk
 from ttkthemes import ThemedStyle
 
-from core import cyl_async_ping, cyl_async_ssh, cyl_async_telnet, cyl_util
+from core import (cyl_async_ping, cyl_async_ssh, cyl_async_telnet, cyl_util,
+                  cyl_wrapper)
 from scanner import scanner
 
 
@@ -52,13 +53,15 @@ class TreeviewEditEntry():
     def validate_input(self, input_field, input_text):
         if self.validate_callback:
             return self.validate_callback(input_field, input_text)
-        return True
+        return True, ""
 
     def on_return(self, event):
         input_field = self.treeview.heading(self.column, option="text")
-        if not self.validate_input(input_field , self.edit_entry.get()):
-            messagebox.showerror("Error", f"Invalid {input_field} !", parent=self.edit_entry)
+        res, msg = self.validate_input(input_field , self.edit_entry.get())
+        if not res:
+            messagebox.showerror("Error", f"Invalid {input_field}:{msg} !", parent=self.edit_entry)
             return
+
         self.exit_result = True
         self.input_txt = self.edit_entry.get()
         self.edit_entry.destroy()
@@ -82,11 +85,30 @@ class myTreeviewBindSetter():
     
     def binding(self):
         self.create_menu()
+        self.treeview.bind("<Button-3>", self.show_menu)
+        self.treeview.bind('<Control-a>', self.select_all)
+        self.treeview.bind('<Delete>', lambda event: self.remove_selected_items())
+        self.treeview.bind("<Shift-Up>",lambda event: self.movement("Up"))
+        self.treeview.bind("<Shift-Down>",lambda event: self.movement("Down"))
+
         for key, val in self.callback_func.items():
             if val:
                 self.treeview.bind(key, lambda event: val(event))
-        self.treeview.bind("<Button-3>", self.show_menu)
         self.treeview.bind("<Double-1>", self.double_click)
+
+    def movement(self, action="Up"):
+        selected_items = self.treeview.selection()
+        step = -1 if action == "Up" else 1
+        if not selected_items:
+            return 'break'
+        if self.treeview.index(selected_items[0])+step < 0 or self.treeview.index(selected_items[-1])+step >= len(self.treeview.get_children('')):
+            return 'break'
+
+        if action == "Down":
+            selected_items = reversed(selected_items)
+        for s in selected_items:
+            self.treeview.move(s, '', self.treeview.index(s)+step)
+        return 'break'
 
     def create_menu(self):
         self.treeview_menu = tk.Menu(self.treeview, tearoff=0)
@@ -94,12 +116,14 @@ class myTreeviewBindSetter():
             if val:
                 self.treeview_menu.add_command(label=key, command=val)
 
+    @cyl_wrapper.setVar("reverse", False)
     def sort(self, event):
         col_id =  self.treeview.identify('column', event.x, event.y)
 
         rows = [(str( self.treeview.set(item, col_id)).lower(), item) 
                     for item in  self.treeview.get_children('')]
-        rows.sort()
+        rows.sort(reverse=self.sort.reverse)
+        self.sort.__dict__["reverse"] ^= True
 
         for index, (values, item) in enumerate(rows):
              self.treeview.move(item, '', index)
@@ -107,6 +131,7 @@ class myTreeviewBindSetter():
     def double_click(self, event):
         """handel the double click event."""
         region = self.treeview.identify_region(event.x,event.y)
+        # print(region)
 
         ## Clear selection when click on blank
         if region == "nothing":
@@ -126,6 +151,17 @@ class myTreeviewBindSetter():
             if not self.treeview.selection():
                 self.treeview.selection_set(item)
         self.treeview_menu.post(event.x_root, event.y_root)
+
+    def select_all(self, event):
+        selected_items = self.treeview.selection()
+        all_items = self.treeview.get_children()
+        
+        if len(selected_items) == len(all_items):
+            self.treeview.selection_remove(*selected_items)
+            self.treeview.see(self.treeview.get_children()[0])
+        else:
+            self.treeview.selection_set(*all_items)
+            self.treeview.see(self.treeview.get_children()[-1])
 
     def remove_selected_items(self):
         selected_items = self.treeview.selection()
@@ -188,19 +224,20 @@ class popupWindow_Configure(popupWindow):
 
         ## Popup position
         self.initial_position(master)
+        self.refresh_window_status()
 
     def create_ui(self):
         connection_mode_label = ttk.Label(self.popup, text="OS Connection mode:")
         connection_mode_ssh = ttk.Radiobutton(self.popup, text="SSH",
                                               variable=self.os_connection_mode_var,
                                               value="SSH",
-                                              command=self.toggle_password_entry)
+                                              command=self.refresh_window_status)
 
         connection_mode_telnet = ttk.Radiobutton(self.popup,
                                                  text="Telnet",
                                                  variable=self.os_connection_mode_var,
                                                  value="Telnet",
-                                                 command=self.toggle_password_entry)
+                                                 command=self.refresh_window_status)
 
         # Passwd entry
         self.password_label = ttk.Label(self.popup, text="Password:")
@@ -219,7 +256,7 @@ class popupWindow_Configure(popupWindow):
         save_button.grid(        row=4, column=3, padx=5,  pady=10, sticky="e")
 
 
-    def toggle_password_entry(self):
+    def refresh_window_status(self):
         if self.os_connection_mode_var.get() == "SSH":
             self.password_label.grid(row=3, column=0, padx=5, pady=5, sticky="e")
             self.password_entry.grid(row=3, column=1, columnspan=3, padx=5, pady=5, sticky="w")
@@ -316,13 +353,15 @@ class popupWindow_SCP_Setting(popupWindow):
             def validate_variable_name(text):
                 l = [self.variable_treeview.set(item)["variable"] 
                         for item in self.variable_treeview.get_children('')]
-                return text and text not in l
+                if not text:
+                    return False, "Variable name cannot be empty!"
+                if text in l:
+                    return False, "Variable name already exists."
+                return True, ""
 
             if input_field == "Variable":
-                if not validate_variable_name(input_text):
-                    return False
-
-            return True
+                return validate_variable_name(input_text)
+            return True, ""
 
         def edit_treeview_item(event):
             item = self.variable_treeview.identify_row(event.y)
@@ -363,7 +402,7 @@ class popupWindow_SCP_Setting(popupWindow):
             if popupWin.exit_result and new_item:
                 self.variable_treeview.insert("", "end", values=new_item)
 
-        callback_dict = {"<Double-1>": edit_treeview_item}
+        callback_dict = {"<Double-1>": edit_treeview_item, "<Delete>": lambda event: remove_selected_items()}
         menu_callback_dict = {"Add": add_variable_treeview_item, "Remove": remove_selected_items}
         myTreeviewBindSetter(self.variable_treeview, callback_dict, menu_callback_dict).binding()
 
@@ -424,7 +463,7 @@ class popupWindow_SCP(popupWindow):
         self.combo_box = ttk.Combobox(self.popup,
                     width=25,
                     values=self.config_list,
-                    font=("Helvetica", 12))
+                    font=("微軟正黑體", 12))
 
         self.combo_box.bind("<KeyRelease>", self.on_combobox_keyrelease)
         self.combo_box.bind('<Return>', lambda event: self.combo_box.event_generate('<Down>'))
@@ -468,13 +507,14 @@ class popupWindow_input_fields(popupWindow):
     def validate_input(self, input_field, input_text):
         if self.validate_callback:
             return self.validate_callback(input_field, input_text)
-        return True
+        return True, ""
 
     def save_configuration(self):
 
         for k in self.input_field_dict:
-            if not self.validate_input(k, getattr(self, k).get()):
-                messagebox.showerror("Error", f"Invalid {k} !", parent=self.popup)
+            res, msg = self.validate_input(k, getattr(self, k).get())
+            if not res:
+                messagebox.showerror("Error", f"Invalid {k}:{msg} !", parent=self.popup)
                 return
 
         self.input_field_dict = {k: getattr(self, k).get() for k in self.input_field_dict}
@@ -482,13 +522,14 @@ class popupWindow_input_fields(popupWindow):
         self.save_and_exit()
 
 
-class popupWindow_OS_Cmd(popupWindow):
-    def __init__(self, master, action="Add", config_value={"label": "operation"}):
-        super().__init__(master, f"{action} OS Cmd")
+class popupWindow_Cmd_Operation(popupWindow):
+    def __init__(self, master, action="Add", config_value={}, validate_callback=None):
+        super().__init__(master, f"{action} Cmds")
 
         self.config_value = config_value
 
         self.action = action
+        self.validate_callback = validate_callback
         ## Create UI
         self.create_ui()
 
@@ -499,10 +540,10 @@ class popupWindow_OS_Cmd(popupWindow):
         Op_label = ttk.Label(self.popup, text="Operation Label:")
         Op_label.pack(padx=5, pady=5)
         self.entry = ttk.Entry(self.popup, width=40)
-        self.entry.insert(tk.END, self.config_value.get("label"))
+        self.entry.insert(tk.END, self.config_value.get("label", ""))
         self.entry.pack(padx=5, pady=5)
 
-        label = ttk.Label(self.popup, text="Enter OS Cmd:")
+        label = ttk.Label(self.popup, text="Enter Cmds:")
         label.pack(padx=5, pady=5)
 
         self.text = tk.Text(self.popup,
@@ -510,7 +551,7 @@ class popupWindow_OS_Cmd(popupWindow):
                             background="White",
                             height=10,
                             width=70,
-                            font=("Helvetica", 12))
+                            font=("微軟正黑體", 12))
         self.text.pack(padx=5, pady=5, fill="both", expand=True)
         if self.action == "Edit":
             self.text.insert(tk.END, self.config_value.get("text", ""))
@@ -518,61 +559,26 @@ class popupWindow_OS_Cmd(popupWindow):
         submit_button = ttk.Button(self.popup, text=f"{self.action}", command=self.save_configuration)
         submit_button.pack(padx=5, pady=5)
 
-    def save_configuration(self):
-        self.config_value = {"label": str(self.entry.get()).strip(), "text": str(self.text.get("1.0", "end-1c"))}
-        self.save_and_exit()
-
-
-class popupWindow_LGW_Cmd(popupWindow):
-    def __init__(self, master, action="Add", initialvalue=""):
-        super().__init__(master, f"{action} LGW Cmd")
-
-        self.lgw_cmd_list = []
-        if action == "Edit":
-            self.lgw_cmd_list = [initialvalue]
-
-        self.action = action
-        ## Create UI
-        self.create_ui()
-
-        ## Popup position
-        self.initial_position(master)
-
-    def create_ui(self):
-        label = ttk.Label(self.popup, text="Enter LGW Cmd:")
-        label.pack(padx=5, pady=5)
-
-        if self.action == "Add":
-            self.text = tk.Text(self.popup,
-                                wrap="word",
-                                background="White",
-                                height=10,
-                                width=70,
-                                font=("Helvetica", 12))
-            self.text.pack(padx=5, pady=5, fill="both", expand=True)
-        elif self.action == "Edit":
-            self.entry = ttk.Entry(self.popup, width=100)
-            self.entry.insert(tk.END, self.lgw_cmd_list[0])
-            self.entry.pack(padx=5, pady=5, fill="both", expand=True)
-
-        submit_button = ttk.Button(self.popup, text=f"{self.action}", command=self.save_configuration)
-        submit_button.pack(padx=5, pady=5)
+    def validate_input(self, input_field, input_text):
+        if self.validate_callback:
+            return self.validate_callback(input_field, input_text)
+        return True, ""
 
     def save_configuration(self):
-        if self.action == "Add":
-            self.lgw_cmd_list = str(self.text.get("1.0", "end-1c")).splitlines()
-            self.lgw_cmd_list = [cmd.strip() for cmd in self.lgw_cmd_list if cmd.strip()]
+        cmd_str_list = str(self.text.get("1.0", "end-1c")).splitlines()
+        cmd_str_list = [cmd_str.strip() for cmd_str in cmd_str_list if cmd_str.strip()]
+        config_value = {"label": str(self.entry.get()), "text": '\n'.join(cmd_str_list)}
+        for k in config_value:
+            res, msg = self.validate_input(k, config_value.get(k))
+            if not res:
+                messagebox.showerror("Error", msg, parent=self.popup)
+                return
 
-        elif self.action == "Edit":
-            self.lgw_cmd_list = [str(self.entry.get()).strip()]
-    
-        error_cmds = [cmd for cmd in self.lgw_cmd_list if not cyl_util.is_lgw_cmd_format(cmd)]
-        if error_cmds:
-            error_cmds_msg = "\n".join(error_cmds)
-            messagebox.showerror("Error", f"Invalid LGW cmd:\n{error_cmds_msg}", parent=self.popup)
-            return
+        if not config_value.get("label"):
+            config_value["label"] = cmd_str_list[0]
+
+        self.config_value = config_value
         self.save_and_exit()
-
 
 class MyApp(ctk.CTk):
 # class MyApp(tk.Tk):
@@ -648,12 +654,12 @@ class MyApp(ctk.CTk):
         # print(self.style.theme_names())
         self.style.theme_use(theme)
 
-        ttk.Style().configure('my.TButton', font=('Helvetica', 12),
+        ttk.Style().configure('my.TButton', font=('微軟正黑體', 12),
                                             focuscolor='none')
         # ttk.Style().map('my.TButton', foreground=[("active", "White")],
         #                               background=[("active", "#2a6cdd")])
 
-        ttk.Style().configure('my.TLabel', font=('Helvetica', 12))
+        ttk.Style().configure('my.TLabel', font=('微軟正黑體', 12))
 
         ttk.Style().configure('my.TFrame', background='#282b30')
 
@@ -664,7 +670,7 @@ class MyApp(ctk.CTk):
         ttk.Style().map('my.TEntry', foreground=[("selected", "White")],
                                      background=[("active", "#2a6cdd")])
 
-        ttk.Style().configure('my.TNotebook', font=('Helvetica', 12),
+        ttk.Style().configure('my.TNotebook', font=('微軟正黑體', 12),
                                             focuscolor='none')
         ## Title bar color
         HWND = windll.user32.GetParent(self.winfo_id())
@@ -699,20 +705,35 @@ class MyApp(ctk.CTk):
             self.scp_config = SCP_Setting
 
         if Scan_items := cyl_util.load_config_json(os.path.join('recall','Scan_items.json')):
-            for item_info in Scan_items:
+            for item_info in Scan_items.get("scan_items"):
                 text = item_info["text"]
                 values = item_info["values"]
                 self.scan_treeview.insert("", "end", text=text, values=values)
+
+            self.OS_connection_mode = Scan_items.get("OS_connection_mode", self.OS_connection_mode)
+            scan_network = Scan_items.get("scan_network", self.ip_range_entry.get())
+            self.ip_range_entry.delete(0, tk.END)
+            self.ip_range_entry.insert(tk.END, scan_network)
         # self.scp_config
 
         LGW_content = cyl_util.load_config_json(os.path.join('recall','LGW_Cmds.json'))
         OS_content = cyl_util.load_config_json(os.path.join('recall','OS_Cmds.json'))
 
         if LGW_content:
-            for cmd in LGW_content.get("command_templates", []):
-                cmd = cyl_util.make_cmd(cmd.pop("cmd"), **cmd)
-                if cyl_util.is_lgw_cmd_format(cmd):
-                    self.lgw_cmd_treeview.insert("", "end", values=(cmd,))
+            for cmd_temp in LGW_content.get("operations", []):
+                if not (commands := cmd_temp.get("commands")):
+                    continue
+                
+                commands_str_list = []
+                for cmd in commands:
+                    cmd_str = cyl_util.make_cmd(cmd.pop("cmd"), **cmd)
+                    if cyl_util.is_lgw_cmd_format(cmd_str):
+                        commands_str_list.append(cmd_str)
+
+                if not (label := cmd_temp.get("label")):
+                    label = commands_str_list[0]
+                commands_text = '\n'.join(commands_str_list)
+                self.lgw_cmd_treeview.insert("", "end", values=(label,), text=commands_text)
 
             self.default_LGW_cmd_timeout_sec = LGW_content.get("timeout_sec", self.default_LGW_cmd_timeout_sec)
             self.lgw_cmd_timeout_entry.delete(0, tk.END)
@@ -736,7 +757,7 @@ class MyApp(ctk.CTk):
 
 
     def output_default_content(self):
-
+        ## OS Cmds
         os_cmd_json = {"operations":[], "timeout_sec": int(self.os_cmd_timeout_entry.get())}
         for item in self.os_cmd_treeview.get_children():
             label = self.os_cmd_treeview.set(item, "operation")
@@ -745,31 +766,36 @@ class MyApp(ctk.CTk):
             os_cmd["commands"] = text.split('\n')
             os_cmd_json["operations"].append(os_cmd)
         
-
-        lgw_cmd_json = {"command_templates":[],
+        ## LGW Cmds
+        lgw_cmd_json = {"operations":[],
                         "channels": self.channel_list_entry.get(),
                         "timeout_sec": int(self.lgw_cmd_timeout_entry.get())}
 
         for item in self.lgw_cmd_treeview.get_children():
-            command = self.lgw_cmd_treeview.set(item, "command")
-            lgw_cmd = cyl_util.content9528_to_dict(command)
-            lgw_cmd_json["command_templates"].append(lgw_cmd)
+            label = self.lgw_cmd_treeview.set(item, "operation")
+            text = self.lgw_cmd_treeview.item(item, "text")
+            lgw_cmd = {"label": label}
+            lgw_cmd["commands"] = [cyl_util.content9528_to_dict(cmd) for cmd in text.split('\n')]
+            lgw_cmd_json["operations"].append(lgw_cmd)
 
         cyl_util.output_config_json(os_cmd_json, os.path.join('recall','OS_Cmds.json'))
         cyl_util.output_config_json(lgw_cmd_json, os.path.join('recall','LGW_Cmds.json'))
         cyl_util.output_config_json(self.scp_config, os.path.join('recall','SCP_Setting.json'))
 
-        scan_items = []
+        ## LGW Cmds
+        scan_items_json = {"scan_network": self.ip_range_entry.get(),
+                           "OS_connection_mode": self.OS_connection_mode,
+                           "scan_items": []}
+
         for item in self.scan_treeview.get_children():
             item_data = self.scan_treeview.item(item)
             item_info = {
                 "text": item_data["text"],
                 "values": item_data["values"]
             }
-            scan_items.append(item_info)
+            scan_items_json["scan_items"].append(item_info)
 
-        cyl_util.output_config_json(scan_items, os.path.join('recall','Scan_items.json'))
-
+        cyl_util.output_config_json(scan_items_json, os.path.join('recall','Scan_items.json'))
 
     def disableChildren(self, parent):
 
@@ -818,7 +844,7 @@ class MyApp(ctk.CTk):
         #                            style='my.TEntry')
         self.ip_range_entry = tk.Entry(base_frame)
         self.ip_range_entry.config(disabledbackground="#dddddd")
-        self.ip_range_entry.insert(tk.END, "172.16.50.0/24")  # Set default value
+        self.ip_range_entry.insert(tk.END, "192.168.48.0/21")  # Set default value
         self.ip_range_entry.bind('<Return>', lambda event: self.btn_click_scan())
 
 
@@ -847,7 +873,7 @@ class MyApp(ctk.CTk):
         #         foreground=[("selected", "white")])
 
         style_value = ttk.Style()
-        style_value.configure("my.Treeview", rowheight=25, font=("Helvetica", 12))
+        style_value.configure("my.Treeview", rowheight=25, font=("微軟正黑體", 12))
 
         self.scan_treeview = ttk.Treeview(table_frame, selectmode="extended", style="my.Treeview", height=10)
 
@@ -884,6 +910,22 @@ class MyApp(ctk.CTk):
 
         self.scan_treeview.pack(expand=1, fill=tk.BOTH, pady=0)
         self.scan_treeview.bind("<Double-1>", self.scan_treeview_db_click)
+
+        def movement(action="Up"):
+            selected_items = self.scan_treeview.selection()
+            step = -1 if action == "Up" else 1
+            if not selected_items:
+                return 'break'
+            if self.scan_treeview.index(selected_items[0])+step < 0 or self.scan_treeview.index(selected_items[-1])+step >= len(self.scan_treeview.get_children('')):
+                return 'break'
+
+            if action == "Down":
+                selected_items = reversed(selected_items)
+            for s in selected_items:
+                self.scan_treeview.move(s, '', self.scan_treeview.index(s)+step)
+            return 'break'
+        self.scan_treeview.bind("<Shift-Up>",lambda event: movement("Up"))
+        self.scan_treeview.bind("<Shift-Down>",lambda event: movement("Down"))
 
         ## scan_treeview_menu
         def remove_scan_treeview_item():
@@ -980,7 +1022,21 @@ class MyApp(ctk.CTk):
                 # append the values separated by \t to the clipboard
                 self.clipboard_append("\t".join(values) + "\n")
 
+        def select_all(event):
+            selected_items = self.scan_treeview.selection()
+            all_items = self.scan_treeview.get_children()
+            
+            self.scan_treeview_lock.acquire()
+            if len(selected_items) == len(all_items):
+                self.scan_treeview.selection_remove(*selected_items)
+                self.scan_treeview.see(self.scan_treeview.get_children()[0])
+            else:
+                self.scan_treeview.selection_set(*all_items)
+                self.scan_treeview.see(self.scan_treeview.get_children()[-1])
+            self.scan_treeview_lock.release()
+
         self.scan_treeview.bind('<Control-c>', copy)
+        self.scan_treeview.bind('<Control-a>', select_all)
 
         self.scan_treeview.tag_configure("offline", background="lightgray")
         self.scan_treeview.tag_configure("online", background="#3dc9cc")
@@ -1050,7 +1106,7 @@ class MyApp(ctk.CTk):
                                    wrap="word",
                                    background="White",
                                    height=21,
-                                   font=("Helvetica", 12))
+                                   font=("微軟正黑體", 12))
         scrollbar = ttk.Scrollbar(output_result_tab_frame, command=self.output_text.yview)
         self.output_text.config(yscrollcommand=scrollbar.set)
         ## set_word_boundaries
@@ -1074,10 +1130,10 @@ class MyApp(ctk.CTk):
 
         tab_control.add(output_result_tab_frame, text="Output and Result")
 
-        self.output_text.tag_configure("red", foreground="red", font=("Helvetica", 12, "italic"))
-        self.output_text.tag_configure("history", foreground="#224581", font=("Helvetica", 12, "italic"))
-        self.output_text.tag_configure("title", foreground="black", font=("Helvetica", 12, "bold"))
-        self.output_text.tag_configure("progress", foreground="#fc7a18", font=("Helvetica", 12, "underline"))
+        self.output_text.tag_configure("red", foreground="red", font=("微軟正黑體", 12, "italic"))
+        self.output_text.tag_configure("history", foreground="#224581", font=("微軟正黑體", 12, "italic"))
+        self.output_text.tag_configure("title", foreground="black", font=("微軟正黑體", 12, "bold"))
+        self.output_text.tag_configure("progress", foreground="#fc7a18", font=("微軟正黑體", 12, "underline"))
 
         ## Input Cmd Tab
         input_cmd_tab_frame = ttk.Frame(tab_control)
@@ -1087,25 +1143,26 @@ class MyApp(ctk.CTk):
         self.os_cmd_treeview["show"] = "headings"
         self.os_cmd_treeview.heading("operation", text="Operation Label")
 
-        def edit_os_cmd_treeview_item(event):
-            selected_item = self.os_cmd_treeview.selection()
-            if selected_item:
-                label = self.os_cmd_treeview.set(selected_item)["operation"]
-                old_text = self.os_cmd_treeview.item(selected_item,"text")
-                popupWin = popupWindow_OS_Cmd(self, "Edit", config_value={"label": label, "text": old_text})
-                self.wait_window(popupWin.popup)
-                if popupWin.exit_result:
-                    config_value = popupWin.config_value
-                    self.os_cmd_treeview.item(selected_item, values=(config_value['label'],), text=config_value['text'])
+        def os_cmds_validate_input(input_field, input_text):
+            def validate_os_cmds(text):
+                if not text:
+                    return False, f"Unable to find any OS commands.!"
 
-        callback_dict = {"<Double-1>": edit_os_cmd_treeview_item}
-        # menu_callback_dict = {"Add": add_variable_treeview_item}
-        myTreeviewBindSetter(self.os_cmd_treeview, callback_dict).binding()
+                return True, ""
+
+            if input_field == "text":
+                return validate_os_cmds(input_text)
+
+            return True, ""
+
+        os_cmds_callback_dict = {"<Double-1>": lambda event: self.edit_cmd_treeview_item(self.os_cmd_treeview, os_cmds_validate_input)}
+        os_cmds_menu_callback_dict = {"Copy": lambda: self.copy_selected_items(self.os_cmd_treeview)}
+        myTreeviewBindSetter(self.os_cmd_treeview, os_cmds_callback_dict, os_cmds_menu_callback_dict).binding()
 
         add_os_operation_button = ttk.Button(input_cmd_tab_frame,
                                         text="Add",
                                         style="my.TButton",
-                                        command=self.btn_click_os_cmd_add_item)
+                                        command=lambda :self.btn_click_cmd_operation_add_item(self.os_cmd_treeview, os_cmds_validate_input))
 
         send_button = ttk.Button(input_cmd_tab_frame,
                                  text="Send OS Cmd",
@@ -1127,30 +1184,36 @@ class MyApp(ctk.CTk):
 
         ## lgw Cmd Tab
         lgw_cmd_tab_frame = ttk.Frame(tab_control)
-        self.lgw_cmd_treeview = ttk.Treeview(lgw_cmd_tab_frame, columns=("command"), style='my.Treeview')
+        self.lgw_cmd_treeview = ttk.Treeview(lgw_cmd_tab_frame, columns=("operation"), style='my.Treeview')
 
         self.lgw_cmd_treeview["show"] = "headings"
-        self.lgw_cmd_treeview.heading("command", text="Command Template")
-
-        def edit_lgw_cmd_treeview_item(event):
-            selected_item = self.lgw_cmd_treeview.selection()
-            if selected_item:
-                old_text = self.lgw_cmd_treeview.set(selected_item)["command"]
-                popupWin = popupWindow_LGW_Cmd(self, "Edit", initialvalue=old_text)
-                self.wait_window(popupWin.popup)
-                if popupWin.exit_result:
-                    new_text = popupWin.lgw_cmd_list[0]
-                    self.lgw_cmd_treeview.item(selected_item, values=(new_text,))
+        self.lgw_cmd_treeview.heading("operation", text="Operation Lable")
 
 
-        callback_dict = {"<Double-1>": edit_lgw_cmd_treeview_item}
-        # menu_callback_dict = {"Add": add_variable_treeview_item}
-        myTreeviewBindSetter(self.lgw_cmd_treeview, callback_dict).binding()
+        def lgw_cmds_validate_input(input_field, input_text):
+            def validate_lgw_cmds(text):
+                if not text:
+                    return False, f"Unable to find any LGW commands.!"
+
+                error_cmds = [cmd for cmd in str(text).splitlines() if not cyl_util.is_lgw_cmd_format(cmd)]
+                if error_cmds:
+                    error_cmds_msg = "\n".join(error_cmds)
+                    return False, f"Invalid LGW Commands:\n{error_cmds_msg}"
+                return True, ""
+
+            if input_field == "text":
+                return validate_lgw_cmds(input_text)
+
+            return True, ""
+
+        lgw_cmds_callback_dict = {"<Double-1>": lambda event: self.edit_cmd_treeview_item(self.lgw_cmd_treeview, lgw_cmds_validate_input)}
+        lgw_cmds_menu_callback_dict = {"Copy": lambda: self.copy_selected_items(self.lgw_cmd_treeview)}
+        myTreeviewBindSetter(self.lgw_cmd_treeview, lgw_cmds_callback_dict, lgw_cmds_menu_callback_dict).binding()
 
         add_button = ttk.Button(lgw_cmd_tab_frame,
                                 text="Add",
                                 style="my.TButton",
-                                command=self.btn_click_lgw_cmd_add_item)
+                                command=lambda :self.btn_click_cmd_operation_add_item(self.lgw_cmd_treeview, lgw_cmds_validate_input))
         
         send_button = ttk.Button(lgw_cmd_tab_frame,
                                  text="Send LGW Cmd",
@@ -1180,20 +1243,29 @@ class MyApp(ctk.CTk):
 
         tab_control.pack(expand=1, fill="both", padx=10, pady=5)
 
-    def btn_click_lgw_cmd_add_item(self):
-        popupWin = popupWindow_LGW_Cmd(self)
-        self.wait_window(popupWin.popup)
-        if popupWin.exit_result:
-            lgw_cmd_list = popupWin.lgw_cmd_list
-            for cmd in lgw_cmd_list:
-                self.lgw_cmd_treeview.insert("", "end", values=(cmd,))
+    def copy_selected_items(self, treeview):
+        selected_items = treeview.selection()
+        for item in selected_items:
+            item_data = treeview.item(item)
+            treeview.insert("", "end", **item_data) 
 
-    def btn_click_os_cmd_add_item(self):
-        popupWin = popupWindow_OS_Cmd(self)
+    def edit_cmd_treeview_item(self, treeview, validate_callback=None):
+        selected_item = treeview.selection()
+        if selected_item:
+            label = treeview.set(selected_item)["operation"]
+            old_text = treeview.item(selected_item,"text")
+            popupWin = popupWindow_Cmd_Operation(self, "Edit", config_value={"label": label, "text": old_text}, validate_callback=validate_callback)
+            self.wait_window(popupWin.popup)
+            if popupWin.exit_result:
+                config_value = popupWin.config_value
+                treeview.item(selected_item, values=(config_value['label'],), text=config_value['text'])
+
+    def btn_click_cmd_operation_add_item(self, treeview, validate_callback=None):
+        popupWin = popupWindow_Cmd_Operation(self, validate_callback=validate_callback)
         self.wait_window(popupWin.popup)
         if popupWin.exit_result:
             config_value = popupWin.config_value
-            self.os_cmd_treeview.insert("", "end", values=(config_value["label"],), text=config_value["text"])
+            treeview.insert("", "end", values=(config_value["label"],), text=config_value["text"])
 
     def btn_click_send_lgw_commands(self):
         selected_items = self.scan_treeview.selection()
@@ -1220,10 +1292,12 @@ class MyApp(ctk.CTk):
         timeout_sec = None if timeout_sec == "" else float(timeout_sec)
 
         def send_lgw_commands():
+            cmd_list = []
+            for item in selected_cmd_items:
+                input_command = self.lgw_cmd_treeview.item(item, "text")
+                cmd_list += input_command.splitlines()
 
-            cmd_list = [self.lgw_cmd_treeview.set(item)["command"] for item in selected_cmd_items]
-            # print(cmd_list)
-
+            print(cmd_list)
             hosts = [self.scan_treeview.set(item) for item in selected_items]
             res = asyncio.run(cyl_async_telnet.send_telnet_9528cmds(hosts,
                                                                     cmd_template_list=cmd_list,
@@ -1540,7 +1614,7 @@ class MyApp(ctk.CTk):
         self.output_text_insert(f"Find {len(hosts)} devices.")
         self.output_text_insert(f"Scan devices finish!!!\n", "progress")
 
-
+    @cyl_wrapper.setVar("reverse", False)
     def scan_treeview_db_click(self, event):
         region = self.scan_treeview.identify_region(event.x,event.y)
 
@@ -1552,12 +1626,16 @@ class MyApp(ctk.CTk):
         elif region == "heading":
             col_id = self.scan_treeview.identify('column', event.x, event.y)
 
-            rows = [(str(self.scan_treeview.set(item, col_id)).lower(), item) 
+            rows = [(str(self.scan_treeview.set(item, col_id)).lower(), item)
                         for item in self.scan_treeview.get_children('')]
-            rows.sort()
+
+            rows.sort(reverse=self.scan_treeview_db_click.reverse)
+            self.scan_treeview_db_click.__dict__["reverse"] ^= True
 
             for index, (values, item) in enumerate(rows):
+                self.scan_treeview_lock.acquire()
                 self.scan_treeview.move(item, '', index)
+                self.scan_treeview_lock.release()
 
         ## Show history
         elif region == "cell":

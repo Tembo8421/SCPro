@@ -154,3 +154,13 @@ def schedule_do(interval: int=1, units: str="seconds"):
         return do
     
     return decorator
+    
+
+def setVar(varname: str, val: object):
+    def wrapper(originFunction):
+        @wraps(originFunction)
+        def inner(*arg, **kwarg):
+            return originFunction(*arg, **kwarg)
+        setattr(inner, varname, val)
+        return inner  # wrapper return
+    return wrapper

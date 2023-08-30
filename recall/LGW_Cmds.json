@@ -1,21 +1,22 @@
 {
-    "command_templates": [
+    "operations": [
         {
-            "cmd": "switch-off",
-            "target-id": "0000d01411b0ffff:1"
+            "label": "開啟",
+            "commands": [
+                {
+                    "cmd": "switch-on",
+                    "target-id": "0000d01411b0ffff:1"
+                }
+            ]
         },
         {
-            "cmd": "switch-on",
-            "target-id": "0000d01411b0ffff:1"
-        },
-        {
-            "cmd": "switch-toggle",
-            "target-id": "0000d01411b0ffff:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "on-off-state",
-            "target-id": "0000d01411b0ffff:1"
+            "label": "關閉",
+            "commands": [
+                {
+                    "cmd": "switch-off",
+                    "target-id": "0000d01411b0ffff:1"
+                }
+            ]
         }
     ],
     "channels": "1-8",

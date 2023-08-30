@@ -1,105 +1,6 @@
 {
     "command_templates": [
         {
-            "cmd": "configure",
-            "pretty_print": false
-        },
-        {
-            "cmd": "level-move-to",
-            "target-id": "0000d01411b0ffff:1",
-            "value": 50
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "build-time",
-            "target-id": "0000d01411b012A0:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "commit-id",
-            "target-id": "0000d01411b0ffff:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "current-level",
-            "target-id": "0000d01411b012A0:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "customer-id",
-            "target-id": "0000d01411b0ffff:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "identify-time",
-            "target-id": "0000d01411b0ffff:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "location-description",
-            "target-id": "0000d01411b0ffff:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "manufacture-name",
-            "target-id": "0000d01411b0ffff:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "model-id",
-            "target-id": "0000d01411b0ffff:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "name-tag",
-            "target-id": "0000d01411b012A0:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "on-off-state",
-            "target-id": "0000d01411b0ffff:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "on-off-transition-time",
-            "target-id": "0000d01411b012A0:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "power-source",
-            "target-id": "0000d01411b0ffff:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "product-id",
-            "target-id": "0000d01411b0ffff:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "revision-id",
-            "target-id": "0000d01411b0ffff:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "revision-supplement",
-            "target-id": "0000d01411b012A0:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "target-level",
-            "target-id": "0000d01411b0ffff:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "uart-baudrate",
-            "target-id": "0000d01411b012A0:1"
-        },
-        {
-            "cmd": "read-attr",
-            "attr": "zcl-version",
-            "target-id": "0000d01411b0ffff:1"
-        },
-        {
             "cmd": "switch-off",
             "target-id": "0000d01411b0ffff:1"
         },
@@ -112,36 +13,11 @@
             "target-id": "0000d01411b0ffff:1"
         },
         {
-            "cmd": "write-attr",
-            "attr": "identify-time",
-            "target-id": "0000d01411b012A0:1",
-            "value": 0
-        },
-        {
-            "cmd": "write-attr",
-            "attr": "location-description",
-            "target-id": "0000d01411b012A0:1",
-            "value": "LOCATION"
-        },
-        {
-            "cmd": "write-attr",
-            "attr": "name-tag",
-            "target-id": "0000d01411b012A0:1",
-            "value": "NAME TAG"
-        },
-        {
-            "cmd": "write-attr",
-            "attr": "on-off-transition-time",
-            "target-id": "0000d01411b012A0:1",
-            "value": 0
-        },
-        {
-            "cmd": "write-attr",
-            "attr": "uart-baudrate",
-            "target-id": "0000d01411b012A0:1",
-            "value": 115200
+            "cmd": "read-attr",
+            "attr": "on-off-state",
+            "target-id": "0000d01411b0ffff:1"
         }
     ],
-    "channels": "1",
+    "channels": "1-8",
     "timeout_sec": 15
 }

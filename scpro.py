@@ -763,7 +763,7 @@ class MyApp(ctk.CTk):
             label = self.os_cmd_treeview.set(item, "operation")
             text = self.os_cmd_treeview.item(item, "text")
             os_cmd = {"label": label}
-            os_cmd["commands"] = text.split('\n')
+            os_cmd["commands"] = text.splitlines()
             os_cmd_json["operations"].append(os_cmd)
         
         ## LGW Cmds
@@ -775,7 +775,7 @@ class MyApp(ctk.CTk):
             label = self.lgw_cmd_treeview.set(item, "operation")
             text = self.lgw_cmd_treeview.item(item, "text")
             lgw_cmd = {"label": label}
-            lgw_cmd["commands"] = [cyl_util.content9528_to_dict(cmd) for cmd in text.split('\n')]
+            lgw_cmd["commands"] = [cyl_util.content9528_to_dict(cmd) for cmd in text.splitlines()]
             lgw_cmd_json["operations"].append(lgw_cmd)
 
         cyl_util.output_config_json(os_cmd_json, os.path.join('recall','OS_Cmds.json'))

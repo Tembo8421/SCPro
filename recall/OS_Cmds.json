@@ -3,8 +3,7 @@
         {
             "label": "change passwd",
             "commands": [
-                "echo -e 'root",
-                "root' | passwd root"
+                "echo -e 'root\\nroot' | passwd root"
             ]
         },
         {

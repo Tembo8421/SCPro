@@ -3,7 +3,7 @@ import time
 from abc import ABC, abstractmethod
 
 from . import cyl_telnet
-from . import cyl_util as util
+from . import cyl_util
 from .const import LOGGING_LEVEL
 
 _LOGGER = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ class CYLController(ABC):
         if (dut is None):
             _LOGGER.warning(f'{self.host}:{self.port} dut is None')
             return False
-        # command = util.make_cmd("bye")
+        # command = cyl_util.make_cmd("bye")
         # ret, out = self.send_cmd(command)
         # dut.close()
         # if not ret:
@@ -103,7 +103,7 @@ class CYLController(ABC):
             if ret and just_send:
                 return (True, out)
 
-            ret, out = util.check_9528cmd_response(cmd, ret, out)
+            ret, out = cyl_util.check_9528cmd_response(cmd, ret, out)
             if ret:
                 return True, out
 

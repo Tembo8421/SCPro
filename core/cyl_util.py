@@ -54,7 +54,7 @@ def check_9528cmd_response(cmd: str, ret: bool, out: dict):
 def get_cyl_logger(name, log_file, c_level=logging.DEBUG, f_level=logging.DEBUG, rotation=True):
     """Setup a CYL style logger"""
 
-    return CYLLogger(name, log_file, c_level=c_level, f_level=f_level, rotation=True).getlog()
+    return CYLLogger(name, log_file, c_level=c_level, f_level=f_level, rotation=rotation).getlog()
 
 def make_host_folder_name(host: str):
     """Make folder name by host name"""

@@ -1,5 +1,5 @@
 {
-    "ref_folder": "devices/{IP}",
+    "ref_folder": "devices/{MAC}",
     "pre_cmds": [
                 {
                     "_comment": "Show MAC",

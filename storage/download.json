@@ -47,13 +47,13 @@
             "update_or_not": false,
             "name": "root",
             "folder": "/",
-            "target_path": "devices/{IP}/"
+            "target_path": "devices/{MAC}/"
         },
         {
             "update_or_not": true,
             "name": "device_pair.json",
             "folder": "root/",
-            "target_path": "devices/{IP}/root/device_pair.json",
+            "target_path": "devices/{MAC}/root/device_pair.json",
             "pre_cmds": [
                 {
                     "cmd": "cat /root/device_pair.json"

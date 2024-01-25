@@ -380,7 +380,7 @@ async def scp_process(username, password, remote_hosts: List[dict], action="uplo
         if host.get('ip') is not None:
             config_variables["IP"] = host.get('ip')
         if host.get('mac') is not None:
-            config_variables["MAC"] = host.get('mac')
+            config_variables["MAC"] = host.get('mac').replace(":","")
         if host.get('model-id') is not None:
             config_variables["MODEL"] = host.get('model-id')
 

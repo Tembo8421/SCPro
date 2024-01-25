@@ -11,12 +11,11 @@ from ipaddress import (IPv4Address, IPv4Network, IPv6Network, ip_network,
 import network
 from core import cyl_util
 
-SYS_PLATFORM = platform.system().upper()
-if SYS_PLATFORM != "WINDOWS":
-    raise Exception("Please use the Windows platform.")
-
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.setLevel(logging.DEBUG)
+
+MAC_PATTERN = r'([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})'
+IP_PATTERN = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
 
 def resource_path(relative_path):
     try:
@@ -26,11 +25,23 @@ def resource_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
+SYS_PLATFORM = platform.system().upper()
+print(SYS_PLATFORM)
+
+if SYS_PLATFORM == 'LINUX':
+    ARP_EXE = "/usr/sbin/arp-scan"
+    OPTION = ""
+elif SYS_PLATFORM == 'DARWIN':
+    ARP_EXE = "arp-scan"
+    OPTION = ""
+elif SYS_PLATFORM == 'WINDOWS':
+    ARP_EXE = resource_path(os.path.join('arp-scan-windows', 'Release(x64)', 'arp-scan.exe'))
+    OPTION = "-t"
 
 def scan_devices(ip: str, timeout=30):
-
-    exe_file = resource_path(os.path.join('arp-scan-windows', 'Release(x64)', 'arp-scan.exe'))
-    ret, msg = cyl_util.run_cmd(f'{exe_file} -t {ip}', timeout=timeout)
+    
+    ret, msg = cyl_util.run_cmd(f'{ARP_EXE} {OPTION} {ip}', timeout=timeout) ####
+    # ret, msg = cyl_util.run_cmd(f'{exe_file} -t {ip}', timeout=timeout)
     if not ret or not msg:
         return []
 
@@ -38,11 +49,17 @@ def scan_devices(ip: str, timeout=30):
     output_lines = msg.splitlines()
     devices = []
     for line in output_lines:
-        tokens = line.split(" ")
-        if len(tokens) != 7:
-            continue
-        mac = tokens[2]
-        ip = tokens[4]
+        mac_match = re.search(MAC_PATTERN, line)
+        ip_match = re.search(IP_PATTERN, line)
+        
+        if mac_match:
+            mac = mac_match.group(0)
+            # print(f"MAC Address: {mac_address}")
+
+        if ip_match:
+            ip = ip_match.group(0)
+            # print(f"IP Address: {ip_address}")
+        
         if cyl_util.is_valid_IP(ip) and cyl_util.is_valid_MAC(mac):
             devices.append({"mac": mac, "ip": ip})
 
@@ -53,8 +70,7 @@ async def async_run_arp_scan(ip_net: str, timeout=5):
     # start executing a command in a subprocess
 
     CREATE_NO_WINDOW = 0x08000000
-    exe_file = resource_path(os.path.join('arp-scan-windows', 'Release(x64)', 'arp-scan.exe'))
-    process = await asyncio.create_subprocess_exec(exe_file, '-t', ip_net,
+    process = await asyncio.create_subprocess_exec(f'{ARP_EXE}', f'{OPTION}', ip_net, ####
                                                    stdout=asyncio.subprocess.PIPE,
                                                    stderr=asyncio.subprocess.PIPE,
                                                    creationflags=CREATE_NO_WINDOW)
@@ -79,14 +95,15 @@ async def async_scan_device(ip_net: str, timeout=5):
     output_lines = msg.splitlines()
     devices = []
     for line in output_lines:
-        # print(line)
-        tokens = line.split(" ")
-        if len(tokens) != 7:
-            continue
-        mac = tokens[2]
-        ip_addr = tokens[4]
+
+        mac_match = re.search(MAC_PATTERN, line)
+        ip_match = re.search(IP_PATTERN, line)
+        
+        mac = mac_match.group(0) if mac_match else ""
+        ip_addr = ip_match.group(0) if ip_match else ""
+
         if cyl_util.is_valid_IP(ip_addr) and cyl_util.is_valid_MAC(mac):
-            devices.append({"mac": mac, "ip": ip_addr})
+            devices.append({"mac": mac.upper(), "ip": ip_addr})
 
     return devices
 
@@ -217,9 +234,12 @@ async def async_main_scanner(ip_net_str: str="", mac_pattern: str = r'^D0:14:11:
         networks = [IPv4Network(ip_net_str)]
 
     _LOGGER.debug(networks)
-    # addrs = get_all_address_from_networks(networks)
+    if SYS_PLATFORM != 'WINDOWS':
+        addrs = networks
+    else:
+        addrs = get_all_address_from_networks(networks)
     # print(len(addrs))
-    return await async_discovery_MAC(networks, mac_pattern)
+    return await async_discovery_MAC(addrs, mac_pattern)
 
 
 async def async_scan_networks(networks, mac_pattern: str = r'^D0:14:11:B'):

@@ -4,7 +4,7 @@ import re
 import threading
 import time
 import tkinter as tk
-from ctypes import byref, c_int, sizeof, windll
+from ctypes import byref, c_int, sizeof  # , windll
 from ipaddress import IPv4Network
 from tkinter import messagebox, ttk
 
@@ -673,11 +673,11 @@ class MyApp(ctk.CTk):
         ttk.Style().configure('my.TNotebook', font=('微軟正黑體', 12),
                                             focuscolor='none')
         ## Title bar color
-        HWND = windll.user32.GetParent(self.winfo_id())
-        TITLE_BAR_COLOR = 0x00000000
-        windll.dwmapi.DwmSetWindowAttribute(HWND, 35,
-                                            byref(c_int(TITLE_BAR_COLOR)),
-                                            sizeof(c_int))
+        # HWND = windll.user32.GetParent(self.winfo_id())
+        # TITLE_BAR_COLOR = 0x00000000
+        # windll.dwmapi.DwmSetWindowAttribute(HWND, 35,
+        #                                     byref(c_int(TITLE_BAR_COLOR)),
+        #                                     sizeof(c_int))
 
         ## Background
         # self.configure(background='#515151')

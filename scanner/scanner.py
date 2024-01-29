@@ -32,7 +32,7 @@ if SYS_PLATFORM == 'LINUX':
     ARP_EXE = "/usr/sbin/arp-scan"
     OPTION = ""
 elif SYS_PLATFORM == 'DARWIN':
-    ARP_EXE = "arp-scan"
+    ARP_EXE = resource_path(os.path.join('arp-scan-darwin', 'arp-scan'))
     OPTION = ""
 elif SYS_PLATFORM == 'WINDOWS':
     ARP_EXE = resource_path(os.path.join('arp-scan-windows', 'Release(x64)', 'arp-scan.exe'))
@@ -70,7 +70,9 @@ async def async_run_arp_scan(ip_net: str, timeout=5):
     # start executing a command in a subprocess
 
     CREATE_NO_WINDOW = 0x08000000
-    process = await asyncio.create_subprocess_exec(f'{ARP_EXE}', f'{OPTION}', ip_net, ####
+
+    opt = OPTION.split(" ")
+    process = await asyncio.create_subprocess_exec(f'{ARP_EXE}', *opt, ip_net, ####
                                                    stdout=asyncio.subprocess.PIPE,
                                                    stderr=asyncio.subprocess.PIPE,
                                                    creationflags=CREATE_NO_WINDOW)
@@ -129,6 +131,7 @@ async def async_scan_devices(ip_net_list: list[IPv4Network | IPv4Address]):
 async def async_get_networks(ip_type: str="ipv4") -> list[IPv4Network | IPv6Network]:
     """auto scan lan networks."""
     adapters = await network.async_get_adapters()
+    # print(adapters)
     networks: list[IPv4Network | IPv6Network] = []
     ip_type = ip_type.lower()
     for adapter in adapters:

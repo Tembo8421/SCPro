@@ -1,5 +1,38 @@
 {
     "scan_network": "",
     "OS_connection_mode": "SSH",
-    "scan_items": []
+    "scan_items": [
+        {
+            "text": "",
+            "values": [
+                "172.16.50.8",
+                "D0:14:11:B0:11:D7",
+                "DIMMER",
+                0,
+                "0.3.32",
+                "Error",
+                "Error",
+                "Error",
+                "90f40c9e",
+                "0.38.31",
+                "F6CDCXH00"
+            ]
+        },
+        {
+            "text": "",
+            "values": [
+                "172.16.50.10",
+                "D0:14:11:B0:0B:5C",
+                "SS-8CH",
+                0,
+                "0.3.33",
+                "Error",
+                "Error",
+                "Error",
+                "edbdd0d5",
+                "0.38.35",
+                "H1CDJTR00"
+            ]
+        }
+    ]
 }

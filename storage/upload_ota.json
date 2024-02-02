@@ -50,7 +50,7 @@
             "target_path": "/root/otaConfigFile/setting.json"
         },
         {
-            "update_or_not": true,
+            "update_or_not": false,
             "name": "{FW_NAME}",
             "folder": "{FW_FOLDER}/",
             "target_path": "/root/otaConfigFile/{MCU}.bin",

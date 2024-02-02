@@ -1,24 +1,331 @@
 {
     "operations": [
         {
-            "label": "開啟",
+            "label": "LGW",
             "commands": [
                 {
-                    "cmd": "switch-on",
-                    "target-id": "0000d01411b0ffff:1"
+                    "cmd": "configure",
+                    "pretty_print": false
                 }
             ]
         },
         {
-            "label": "關閉",
+            "label": "switch-on",
+            "commands": [
+                {
+                    "cmd": "switch-on",
+                    "target-id": "0000D01411B012CC:1"
+                }
+            ]
+        },
+        {
+            "label": "switch-off",
             "commands": [
                 {
                     "cmd": "switch-off",
-                    "target-id": "0000d01411b0ffff:1"
+                    "target-id": "0000D01411B012CC:1"
+                }
+            ]
+        },
+        {
+            "label": "on-off-state",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "on-off-state",
+                    "target-id": "0000D01411B012CC:1"
+                }
+            ]
+        },
+        {
+            "label": "power-source",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "power-source",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "zcl-version",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "zcl-version",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "manufacture-name",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "manufacture-name",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "model-id",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "model-id",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "location-description",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "location-description",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "identify-time",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "identify-time",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "revision-id",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "revision-id",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "commit-id",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "commit-id",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "revision-supplement",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "revision-supplement",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "build-time",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "build-time",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "name-tag",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "name-tag",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "product-id",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "product-id",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "customer-id",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "customer-id",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "current-level",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "current-level",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "target-level",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "target-level",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "on-off-transition-time",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "on-off-transition-time",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "on-level",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "on-level",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "off-level",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "off-level",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "duty-max",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "duty-max",
+                    "target-id": "0000D01411B012CC:13"
+                }
+            ]
+        },
+        {
+            "label": "duty-min",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "duty-min",
+                    "target-id": "0000D01411B012CC:14"
+                }
+            ]
+        },
+        {
+            "label": "enumerate",
+            "commands": [
+                {
+                    "cmd": "enumerate",
+                    "refresh": false
+                }
+            ]
+        },
+        {
+            "label": "switch-toggle",
+            "commands": [
+                {
+                    "cmd": "switch-toggle",
+                    "target-id": "0000D01411B00B62:25"
+                }
+            ]
+        },
+        {
+            "label": "identify-self",
+            "commands": [
+                {
+                    "cmd": "identify-self",
+                    "target-id": "0000D01411B012CC:1",
+                    "duration": 5
+                }
+            ]
+        },
+        {
+            "label": "uart-baudrate",
+            "commands": [
+                {
+                    "cmd": "read-attr",
+                    "attr": "uart-baudrate",
+                    "target-id": "0000D01411B00786:25"
+                }
+            ]
+        },
+        {
+            "label": "level-move-to",
+            "commands": [
+                {
+                    "cmd": "level-move-to",
+                    "target-id": "0000D01411B0786:25",
+                    "level": 170
+                }
+            ]
+        },
+        {
+            "label": "level-move-to=0",
+            "commands": [
+                {
+                    "cmd": "level-move-to",
+                    "target-id": "0000D01411B01278:1",
+                    "level": 0
+                }
+            ]
+        },
+        {
+            "label": "level-move-to=85",
+            "commands": [
+                {
+                    "cmd": "level-move-to",
+                    "target-id": "0000D01411B011:D7:2",
+                    "level": 85
+                }
+            ]
+        },
+        {
+            "label": "level-move-to=170",
+            "commands": [
+                {
+                    "cmd": "level-move-to",
+                    "target-id": "0000D01411B011:D7:3",
+                    "level": 170
+                }
+            ]
+        },
+        {
+            "label": "level-move-to=255",
+            "commands": [
+                {
+                    "cmd": "level-move-to",
+                    "target-id": "0000D01411B011:D7:4",
+                    "level": 255
                 }
             ]
         }
     ],
-    "channels": "1-8",
+    "channels": "1",
     "timeout_sec": 15
 }

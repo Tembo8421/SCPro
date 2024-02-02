@@ -45,10 +45,26 @@
             ]
         },
         {
-            "update_or_not": true,
-            "name": "light_gw_server_v0.38.31",
+            "update_or_not": false,
+            "name": "light_gw_server_v0.38.35",
             "folder": "light_gw_server/",
-            "target_path": "/root/light_gw_server"
+            "target_path": "/root/light_gw_server",
+            "post_cmds": [
+                {
+                    "cmd": "chmod +x /root/light_gw_server"
+                }
+            ]
+        },
+        {
+            "update_or_not": false,
+            "name": "restart_server_v0.2.12.sh",
+            "folder": "restart_server/",
+            "target_path": "/root/restart_server.sh",
+            "post_cmds": [
+                {
+                    "cmd": "chmod +x /root/restart_server.sh"
+                }
+            ]
         },
         {
             "update_or_not": false,
@@ -76,6 +92,12 @@
                     "cmd": "opkg install /root/netcat_0.7.1-2_realtek.ipk"
                 }
             ]
+        },
+        {
+            "update_or_not": false,
+            "name": "device_pair_SS8.json",
+            "folder": "",
+            "target_path": "/root/device_pair.json"
         }
     ]
 }

@@ -1,5 +1,5 @@
 {
-    "ref_folder": "devices/{IP}",
+    "ref_folder": "{BINARY_FOLDER_PATH}",
     "pre_cmds": [
                 {
                     "_comment": "Show MAC",
@@ -28,21 +28,37 @@
                     "cmd": "sleep 1; ps | grep restart_server"
                 }
     ],
-    "files": [
+    "files": [ 
         {
-            "update_or_not": false,
-            "name": "device_pair.json",
-            "folder": "root/",
-            "target_path": "/root/"
-        },
-        {
-            "update_or_not": false,
-            "name": "d0*",
+            "update_or_not": true,
+            "name": "rc.local",
             "folder": "",
-            "target_path": "/tmp/",
+            "target_path": "/etc/rc.local",
             "post_cmds": [
                 {
-                    "cmd": "cat /tmp/d0*"
+                    "cmd": "cat /etc/rc.local"
+                }
+            ]
+        },
+        {
+            "update_or_not": true,
+            "name": "restart_network.sh",
+            "folder": "restart_server/",
+            "target_path": "/root/restart_network.sh",
+            "post_cmds": [
+                {
+                    "cmd": "chmod +x /root/restart_network.sh"
+                }
+            ]
+        },
+        {
+            "update_or_not": true,
+            "name": "restart_server_v0.2.13_debug.sh",
+            "folder": "restart_server/",
+            "target_path": "/root/restart_server.sh",
+            "post_cmds": [
+                {
+                    "cmd": "chmod +x /root/restart_server.sh"
                 }
             ]
         }

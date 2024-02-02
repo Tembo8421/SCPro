@@ -2,13 +2,13 @@
     "storage_folder": "storage",
     "variables": {
         "IP": {
-            "value": "<Scan table 'IP' value.>",
+            "value": "<Scan table 'IP' value>",
             "tags": [
                 "readonly"
             ]
         },
         "MAC": {
-            "value": "<Scan table 'MAC' value>",
+            "value": "<Scan table 'MAC' value without ':'>",
             "tags": [
                 "readonly"
             ]

@@ -25,11 +25,11 @@
         {
             "_comment": "Burn in OS",
             "update_or_not": true,
-            "name": "openwrt-realtek-rtl8196e-None-fw_v0.3.24.bin",
-            "target_path": "tmp/",
+            "name": "openwrt-realtek-rtl8196e-None-fw_v0.3.32.bin",
+            "target_path": "/tmp/",
             "post_cmds": [
                 {
-                    "cmd": "sysupgrade -v -n /tmp/openwrt-realtek-rtl8196e-None-fw_v0.3.24.bin",
+                    "cmd": "sysupgrade -v -n /tmp/openwrt-realtek-rtl8196e-None-fw_v0.3.32.bin",
                     "timeout_sec": 250,
                     "readuntil": "Upgrade completed",
                     "retry": 0,

@@ -877,7 +877,7 @@ class MyApp(ctk.CTk):
 
         self.scan_treeview = ttk.Treeview(table_frame, selectmode="extended", style="my.Treeview", height=10)
 
-        self.scan_treeview["columns"] = ("ip", "mac", "model-id", "ping", "os", "restart server", "restart network", "ota", "commit-id", "light gateway", "product-id")
+        self.scan_treeview["columns"] = ("ip", "mac", "model-id", "ping", "os", "restart server", "restart network", "ota", "commit-id", "light gateway", "product-id(json)", "product-id")
         # self.scan_treeview["columns"] = ("ip", "mac", "model-id", "ping")
         self.scan_treeview.column("ip",         width=138, minwidth=138, stretch=True, anchor="center")
         self.scan_treeview.column("mac",        width=138, minwidth=138, stretch=True, anchor="center")
@@ -890,6 +890,7 @@ class MyApp(ctk.CTk):
         self.scan_treeview.column("ota",                width=0, minwidth=0, stretch=True, anchor="center")
         self.scan_treeview.column("commit-id",          width=0, minwidth=0, stretch=True, anchor="center")
         self.scan_treeview.column("light gateway",      width=0, minwidth=0, stretch=True, anchor="center")
+        self.scan_treeview.column("product-id(json)",   width=0, minwidth=0, stretch=True, anchor="center")
         self.scan_treeview.column("product-id",         width=0, minwidth=0, stretch=True, anchor="center")
 
 
@@ -906,7 +907,8 @@ class MyApp(ctk.CTk):
         self.scan_treeview.heading('ota',              text="OTA")
         self.scan_treeview.heading('commit-id',        text="FW")
         self.scan_treeview.heading('light gateway',    text="LGW")
-        self.scan_treeview.heading('product-id',       text="Product")
+        self.scan_treeview.heading('product-id(json)', text="PID(Json)")
+        self.scan_treeview.heading('product-id',       text="PID")
 
         self.scan_treeview.pack(expand=1, fill=tk.BOTH, pady=0)
         self.scan_treeview.bind("<Double-1>", self.scan_treeview_db_click)
@@ -1565,6 +1567,7 @@ class MyApp(ctk.CTk):
         cmd_template_list.append(cyl_util.make_cmd("read-attr", target_id=tid, attr="model-id"))
         cmd_template_list.append(cyl_util.make_cmd("read-attr", target_id=tid, attr="commit-id"))
         cmd_template_list.append(cyl_util.make_cmd("configure"))
+        cmd_template_list.append(cyl_util.make_cmd("read-attr", target_id=tid, attr="product-id"))
         res = asyncio.run(cyl_async_telnet.send_telnet_9528cmds(hosts, cmd_template_list=cmd_template_list))
 
         for host in hosts:
@@ -1574,7 +1577,8 @@ class MyApp(ctk.CTk):
             device_info_dict[ip]["commit-id"] = MyApp.telnet9528_out_result_filter(result[1]["result"], "value")
             device_info_dict[ip]["os"] = MyApp.telnet9528_out_result_filter(result[2]["result"], "os-version")
             device_info_dict[ip]["light gateway"] = MyApp.telnet9528_out_result_filter(result[2]["result"], "server-version")
-            device_info_dict[ip]["product-id"] = MyApp.telnet9528_out_result_filter(result[2]["result"], "product-id")
+            device_info_dict[ip]["product-id(json)"] = MyApp.telnet9528_out_result_filter(result[2]["result"], "product-id")
+            device_info_dict[ip]["product-id"] = MyApp.telnet9528_out_result_filter(result[3]["result"], "value")
 
         self.output_text_insert(f"Get devices info finish!!!\n", "progress")
         return device_info_dict
@@ -1603,6 +1607,7 @@ class MyApp(ctk.CTk):
                             device_info_dict[ip]["ota"],
                             device_info_dict[ip]["commit-id"],
                             device_info_dict[ip]["light gateway"],
+                            device_info_dict[ip]["product-id(json)"],
                             device_info_dict[ip]["product-id"])
             self.scan_treeview_lock.acquire()
             self.scan_treeview.insert("", "end", values=item_values)
@@ -1678,6 +1683,7 @@ class MyApp(ctk.CTk):
                                 device_info_dict[ip]["ota"],
                                 device_info_dict[ip]["commit-id"],
                                 device_info_dict[ip]["light gateway"],
+                                device_info_dict[ip]["product-id(json)"],
                                 device_info_dict[ip]["product-id"])
                 self.scan_treeview_lock.acquire()
                 self.scan_treeview.item(item, values=item_values)

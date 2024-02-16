@@ -48,10 +48,10 @@ if __name__ == '__main__':
     hosts = args.host_list
 
     if not args.host_list:
-        networks = asyncio.run(scanner.async_get_networks())
-        print(networks)
+        # networks = asyncio.run(scanner.async_get_networks())
+        # print(networks)
         start = time.time()
-        hosts = asyncio.run(scanner.async_main_scanner(str(networks[0])))
+        hosts = asyncio.run(scanner.async_main_scanner())
         print(hosts)
         spent = time.time() - start
         print(len(hosts))

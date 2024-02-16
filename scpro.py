@@ -1463,7 +1463,7 @@ class MyApp(ctk.CTk):
         self.refresh_window_status()
 
         ## Scan by thread
-        self.process_threads["scan_devices"] = threading.Thread(target=self.scan_devices, args=(target_networks,))
+        self.process_threads["scan_devices"] = threading.Thread(target=self.scan_devices, args=(ip_range,))
         self.process_threads["scan_devices"].daemon = True
         self.process_threads["scan_devices"].start()
 
@@ -1583,9 +1583,9 @@ class MyApp(ctk.CTk):
         self.output_text_insert(f"Get devices info finish!!!\n", "progress")
         return device_info_dict
 
-    def scan_devices(self, networks):
+    def scan_devices(self, ip_net_str: str=""):
 
-        hosts = asyncio.run(scanner.async_scan_networks(networks))
+        hosts = asyncio.run(scanner.async_main_scanner(ip_net_str=ip_net_str))
 
         device_info_dict = self.get_devices_info(hosts)
         # print(res)

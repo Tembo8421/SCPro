@@ -122,8 +122,8 @@ async def async_scan_devices(ip_net_list: list[IPv4Network | IPv4Address]):
         if device:
             devices.extend(device)
 
-    print(devices)
-    print(len(devices))
+    # print(devices)
+    # print(len(devices))
 
     return devices
 
@@ -224,6 +224,19 @@ def get_all_address_from_networks(networks: list[IPv4Network | IPv6Network]):
 ## ==============================================
 ## ==============================================
 
+async def async_scan_network(network: IPv4Network | IPv6Network, mac_pattern: str = r'^D0:14:11:B'):
+
+    _LOGGER.debug(network)
+    addrs = []
+    addrs.append(network)
+    # if SYS_PLATFORM != 'WINDOWS':
+    #     addrs.append(network)
+    # else:
+    #     addrs = get_all_address_from_networks([network])
+    # print(len(addrs))
+    return await async_discovery_MAC(addrs, mac_pattern)
+
+
 async def async_main_scanner(ip_net_str: str="", mac_pattern: str = r'^D0:14:11:B'):
 
     networks = []
@@ -236,20 +249,12 @@ async def async_main_scanner(ip_net_str: str="", mac_pattern: str = r'^D0:14:11:
     else:
         networks = [IPv4Network(ip_net_str)]
 
-    _LOGGER.debug(networks)
-    if SYS_PLATFORM != 'WINDOWS':
-        addrs = networks
-    else:
-        addrs = get_all_address_from_networks(networks)
-    # print(len(addrs))
-    return await async_discovery_MAC(addrs, mac_pattern)
+    print(networks)
 
-
-async def async_scan_networks(networks, mac_pattern: str = r'^D0:14:11:B'):
     hosts=[]
     tasks = []
     for net in networks:
-        task = async_main_scanner(str(net), mac_pattern=mac_pattern)
+        task = async_scan_network(net, mac_pattern=mac_pattern)
         tasks.append(task)
     
     # Waiting for all process done
@@ -269,12 +274,8 @@ async def async_scan_networks(networks, mac_pattern: str = r'^D0:14:11:B'):
 
 if __name__ == '__main__':
 
-    networks = asyncio.run(async_get_networks())
-    print(networks)
-
-
     start = time.time()
-    hosts = asyncio.run(async_scan_networks(networks))
+    hosts = asyncio.run(async_main_scanner())
     print(hosts)
     spent = time.time() - start
     print(len(hosts))

@@ -32,15 +32,11 @@ if __name__ == '__main__':
         action = "download"
 
     if not args.host_list:
-        networks = asyncio.run(scanner.async_get_networks())
-        print(networks)
+        # networks = asyncio.run(scanner.async_get_networks())
+        # print(networks)
         start = time.time()
-
-        # hosts = []
-        # for net in networks:
-        #     hosts += asyncio.run(scanner.async_main_scanner(str(net)))
         
-        hosts = asyncio.run(scanner.async_scan_networks(networks))
+        hosts = asyncio.run(scanner.async_main_scanner())
         print(hosts)
 
         spent = time.time() - start

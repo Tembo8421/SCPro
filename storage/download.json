@@ -1,39 +1,39 @@
 {
     "ref_folder": "/",
     "pre_cmds": [
-            {
-                "_comment": "Show MAC",
-                "cmd": "flash get HW_NIC1_ADDR | cut -d '=' -f 2",
-                "timeout_sec": 3,
-                "retry": 2
-            },
-            {
-                "_comment": "Kill lgw and server",
-                "cmd": "killall -9 restart_server.sh light_gw_server; sleep 1"
-            },
-            {
-                "_comment": "Kill twice",
-                "cmd": "!(killall -9 restart_server.sh light_gw_server 2>&1) && echo 'already killed'"
-            },
-            {
-                "cmd": "sleep 1; ps | grep restart_server"
-            }
+        {
+            "_comment": "Show MAC",
+            "cmd": "flash get HW_NIC1_ADDR | cut -d '=' -f 2",
+            "timeout_sec": 3,
+            "retry": 2
+        },
+        {
+            "_comment": "Kill lgw and server",
+            "cmd": "killall -9 restart_server.sh light_gw_server; sleep 1"
+        },
+        {
+            "_comment": "Kill twice",
+            "cmd": "!(killall -9 restart_server.sh light_gw_server 2>&1) && echo 'already killed'"
+        },
+        {
+            "cmd": "sleep 1; ps | grep restart_server"
+        }
     ],
     "post_cmds": [
-            {
-                "_comment": "Restart lgw server",
-                "cmd": "chmod 765 /root/restart_server.sh; /root/restart_server.sh > /dev/null 2>&1 &"
-            },
-            {
-                "cmd": "sleep 1; ps | grep restart_server"
-            }
+        {
+            "_comment": "Restart lgw server",
+            "cmd": "chmod 765 /root/restart_server.sh; /root/restart_server.sh > /dev/null 2>&1 &"
+        },
+        {
+            "cmd": "sleep 1; ps | grep restart_server"
+        }
     ],
     "files": [
         {
             "update_or_not": true,
             "name": "d0*",
             "folder": "tmp/",
-            "target_path": "devices/{IP}/",
+            "target_path": "devices/{MAC}/",
             "pre_cmds": [
                 {
                     "cmd": "rm /tmp/d0*"
@@ -47,13 +47,13 @@
             "update_or_not": false,
             "name": "root",
             "folder": "/",
-            "target_path": "devices/{IP}/"
+            "target_path": "devices/{MAC}/"
         },
         {
             "update_or_not": true,
             "name": "device_pair.json",
             "folder": "root/",
-            "target_path": "devices/{IP}/root/device_pair.json",
+            "target_path": "devices/{MAC}/root/device_pair.json",
             "pre_cmds": [
                 {
                     "cmd": "cat /root/device_pair.json"

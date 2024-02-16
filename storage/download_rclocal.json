@@ -33,7 +33,7 @@
             "update_or_not": true,
             "name": "d0*",
             "folder": "tmp/",
-            "target_path": "devices/{IP}/",
+            "target_path": "devices/{MAC}/",
             "pre_cmds": [
                 {
                     "cmd": "rm /tmp/d0*; echo $?"
@@ -47,7 +47,7 @@
             "update_or_not": true,
             "name": "rc.local",
             "folder": "/etc/",
-            "target_path": "devices/{IP}/etc/",
+            "target_path": "devices/{MAC}/etc/",
             "pre_cmds": [
                 {
                     "cmd": "cat /etc/rc.local"

@@ -69,13 +69,19 @@ def scan_devices(ip: str, timeout=30):
 async def async_run_arp_scan(ip_net: str, timeout=5):
     # start executing a command in a subprocess
 
-    CREATE_NO_WINDOW = 0x08000000
-
     opt = OPTION.split(" ")
-    process = await asyncio.create_subprocess_exec(f'{ARP_EXE}', *opt, ip_net, ####
-                                                   stdout=asyncio.subprocess.PIPE,
-                                                   stderr=asyncio.subprocess.PIPE,
-                                                   creationflags=CREATE_NO_WINDOW)
+    
+    if SYS_PLATFORM == 'WINDOWS':
+        CREATE_NO_WINDOW = 0x08000000
+        process = await asyncio.create_subprocess_exec(f'{ARP_EXE}', *opt, ip_net, ####
+                                                    stdout=asyncio.subprocess.PIPE,
+                                                    stderr=asyncio.subprocess.PIPE,
+                                                    creationflags=CREATE_NO_WINDOW)
+    else:
+        process = await asyncio.create_subprocess_exec(f'{ARP_EXE}', *opt, ip_net, ####
+                                                    stdout=asyncio.subprocess.PIPE,
+                                                    stderr=asyncio.subprocess.PIPE)
+
     try:
         stdout, stderr = await process.communicate()
         await asyncio.wait_for(process.wait(), timeout=timeout)
